@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Test pointe - Colonne gauche</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #e8e8e8; display: flex; justify-content: center; padding: 20px; font-family: sans-serif; }
+
+.page {
+  width: 210mm; height: 297mm;
+  background: #fff;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+  position: relative;
+}
+
+.center-line {
+  position: absolute; top: 0; bottom: 0; left: 105mm;
+  border-left: 0.3mm dashed #f66; z-index: 5;
+}
+
+/* Colonne gauche : 115mm */
+.col-left {
+  position: absolute;
+  top: 30.25mm; left: 0;
+  width: 115mm;
+  display: flex; flex-direction: column;
+}
+
+/* Colonne droite : 115mm, décalée +5.5mm, rotatée 180° */
+.col-right {
+  position: absolute;
+  top: 24.75mm; right: 0;
+  width: 115mm;
+  display: flex; flex-direction: column;
+}
+
+.col-right .label {
+  transform: rotate(180deg);
+}
+
+.label {
+  width: 115mm; height: 11mm;
+  position: relative;
+  display: flex; align-items: center;
+}
+
+/* Fond du corps rectangulaire 0→105mm */
+.label-body {
+  width: 105mm; height: 100%;
+  border-bottom: 0.15mm solid #999;
+  font-size: 6pt; color: #666;
+  display: flex; align-items: center;
+  padding: 0 2mm;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.label:nth-child(odd) .label-body { background: #fafafa; }
+.col-left .label:first-child .label-body { border-top: 0.15mm solid #999; }
+/* Colonne droite rotatée → le dernier enfant DOM est visuellement en haut */
+.col-right .label:last-child .label-body { border-top: 0.15mm solid #999; }
+
+/* Pointe en V : svg inline */
+.pt {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 95mm;
+  width: 20mm;
+  z-index: 2;
+}
+.pt svg {
+  width: 100%; height: 100%;
+  display: block;
+}
+
+.dim { position: absolute; font-size: 7pt; color: #666; z-index: 20; }
+.dim-w { top: 2mm; left: 50%; transform: translateX(-50%); }
+.dim-l { top: 2mm; left: 52.5mm; transform: translateX(-50%); }
+.dim-p { top: 6mm; left: 110mm; transform: translateX(-50%); background: #f66; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 6pt; }
+
+.legend {
+  position: absolute; bottom: 5mm; left: 50%; transform: translateX(-50%);
+  font-size: 7pt; color: #666;
+  background: rgba(255,255,255,0.9);
+  padding: 3mm 5mm; border: 0.3mm solid #ccc; border-radius: 2mm;
+  z-index: 20; text-align: center; line-height: 1.6;
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="center-line"></div>
+  <div class="dim dim-w">← 210 mm →</div>
+  <div class="dim dim-l">105 mm</div>
+  <div class="dim dim-p">115 mm (pointe)</div>
+
+  <div class="col-left" id="colLeft"></div>
+  <div class="col-right" id="colRight"></div>
+
+  <div class="legend">
+    <b>Test pointe V — 2 colonnes en ciseaux</b><br>
+    Corps 105 mm · Pointe en V 95→115 mm · 22 × 2 = 44 étiquettes<br>
+    Droite rotatée 180°, décalée +5.5 mm
+  </div>
+</div>
+
+<script>
+const svgPt = '<div class="pt"><svg viewBox="0 0 20 11" preserveAspectRatio="none"><line x1="0" y1="0" x2="20" y2="5.5" stroke="#999" stroke-width="0.15"/><line x1="0" y1="11" x2="20" y2="5.5" stroke="#999" stroke-width="0.15"/><line x1="0" y1="0" x2="0" y2="11" stroke="#999" stroke-width="0.15"/><line x1="0" y1="5.5" x2="20" y2="5.5" stroke="#999" stroke-width="0.15"/></svg></div>';
+
+for (let i = 0; i < 22; i++) {
+  const l = document.createElement('div');
+  l.className = 'label';
+  l.innerHTML = '<div class="label-body">G' + (i + 1) + '</div>' + svgPt;
+  document.getElementById('colLeft').appendChild(l);
+
+  const r = document.createElement('div');
+  r.className = 'label';
+  r.innerHTML = '<div class="label-body">D' + (i + 1) + '</div>' + svgPt;
+  document.getElementById('colRight').appendChild(r);
+}
+</script>
+</body>
+</html>

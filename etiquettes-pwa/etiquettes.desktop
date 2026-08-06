@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Studio d'étiquettes
+Comment=Créez et imprimez vos étiquettes horticoles depuis Excel
+Exec=bash /chemin/vers/etiquettes-pwa/Lancer-Etiquettes.sh
+Icon=/chemin/vers/etiquettes-pwa/assets/icon-512.png
+Terminal=false
+Type=Application
+Categories=Office;Printing;
+StartupWMClass=etiquettes

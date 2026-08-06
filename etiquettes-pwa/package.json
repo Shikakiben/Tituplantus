@@ -1,0 +1,9 @@
+{
+  "name": "etiquettes-horticoles-11x115",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lancement un clic de l'application d'etiquettes horticoles.",
+  "scripts": {
+    "start": "node launcher.js"
+  }
+}

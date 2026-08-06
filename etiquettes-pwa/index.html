@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2f6a3f" />
+    <meta name="description" content="Créez et imprimez vos étiquettes horticoles 11×115 mm depuis Excel." />
+    <meta name="application-name" content="Étiquettes Horticoles" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Étiquettes" />
+    <link rel="apple-touch-icon" href="assets/icon-192.png" />
+    <title>Impression d'étiquettes</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="assets/xlsx.full.min.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a"></div>
+    <div class="bg-shape bg-shape-b"></div>
+
+    <header>
+      <p class="eyebrow">Production Horticole</p>
+      <h1>Impression d'étiquettes</h1>
+      <p class="subtitle">
+        Format cible: étiquette à piquer 11×115 mm (pointe V comprise), planche A4 portrait, 2 colonnes en ciseaux × 22 lignes.
+      </p>
+    </header>
+
+    <main>
+      <section class="panel controls">
+        <h2>1. Import du fichier de calcul</h2>
+        <label class="file-btn" for="excelFile">Choisir un fichier de calcul (.xlsx, .xls, .ods, .csv…)</label>
+        <input id="excelFile" type="file" accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.fods,.csv,.tsv,.xml" />
+        <p id="importInfo" class="muted">Aucun fichier importe.</p>
+      </section>
+
+      <!-- Modèle d'étiquette -->
+      <section class="panel controls" id="templateEditor">
+        <h2>2. Modèle d'étiquette</h2>
+        <p class="muted">Tire les poignées ⋮ pour redimensionner. Clique sur une cellule pour la configurer.</p>
+
+          <!-- Grille interactive -->
+          <div id="labelGrid" class="label-grid"></div>
+        <!-- Aperçu de l'étiquette -->
+        <div id="singlePreview"></div>
+          <!-- Agencements -->
+          <div class="tpl-row arr-bar">
+            <label for="arrName">Agencement :</label>
+            <input id="arrName" type="text" placeholder="Nom" style="width:130px" />
+            <button type="button" id="saveArrBtn" class="btn-sm">💾 Sauvegarder</button>
+            <select id="arrList" style="max-width:150px"></select>
+            <button type="button" id="loadArrBtn" class="btn-sm">Charger</button>
+            <button type="button" id="delArrBtn" class="btn-sm danger">Supprimer</button>
+          </div>
+
+          <!-- Panneau édition cellule -->
+          <div id="cellEditor" class="cell-editor" style="display:none">
+            <h4>Édition cellule <span id="cellEditorTitle"></span></h4>
+            <div class="cell-editor-row">
+              <label>Colonne Excel</label>
+              <select id="ceCol"></select>
+            </div>
+            <div class="cell-editor-row">
+              <label>Police</label>
+              <select id="ceFont">
+                <option value="Space Grotesk">Space Grotesk</option>
+                <option value="DM Serif Display">DM Serif Display</option>
+                <option value="IBM Plex Mono">IBM Plex Mono</option>
+                <option value="Arial" selected>Arial</option>
+                <option value="Helvetica">Helvetica</option>
+                <option value="Times New Roman">Times New Roman</option>
+              </select>
+              <label>Taille</label>
+              <input id="ceSize" type="number" value="8" min="5" max="18" style="width:50px" />
+              <label><input id="ceBold" type="checkbox" /> G</label>
+              <label><input id="ceItalic" type="checkbox" /> I</label>
+            </div>
+            <div class="cell-editor-row">
+              <label>Alignement H</label>
+              <select id="ceAlignH">
+                <option value="left">Gauche</option>
+                <option value="center" selected>Centre</option>
+                <option value="right">Droite</option>
+              </select>
+              <label>Alignement V</label>
+              <select id="ceAlignV">
+                <option value="flex-start">Haut</option>
+                <option value="center" selected>Milieu</option>
+                <option value="flex-end">Bas</option>
+              </select>
+            </div>
+            <button type="button" id="ceDelete" class="btn-sm" style="color:#c00;border-color:#c00">Supprimer la cellule</button>
+            <button type="button" id="ceClose" class="btn-sm">Fermer</button>
+          </div>
+
+          <p id="mapperInfo" class="muted"></p>
+      </section>
+
+      <section class="panel actions">
+        <h2>3. Générer puis imprimer</h2>
+        <button id="buildBtn">Générer toutes les étiquettes</button>
+        <button id="printBtn" class="secondary">Imprimer</button>
+        <p id="buildInfo" class="muted">Importe un fichier et configure le modèle.</p>
+
+        <!-- Aperçu des planches -->
+        <div id="sheetContainer">
+          <p class="sheet-hint">Clique sur « Générer toutes les étiquettes » pour afficher l'aperçu.</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
