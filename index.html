@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2f6a3f" />
+    <meta name="description" content="Créez et imprimez vos étiquettes horticoles 11×115 mm depuis Excel." />
+    <meta name="application-name" content="Étiquettes Horticoles" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Étiquettes" />
+    <link rel="apple-touch-icon" href="assets/icon-192.png" />
+    <title>1prime tes étiquettes</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="assets/xlsx.full.min.js" defer></script>
+    <script src="formats/models.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a"></div>
+    <div class="bg-shape bg-shape-b"></div>
+
+    <header>
+      <p class="eyebrow">Production Horticole</p>
+      <h1>1prime tes étiquettes</h1>
+    </header>
+
+    <main>
+      <!-- 1. Modèle -->
+      <section class="panel controls">
+        <h2>1. Choisis ton modèle</h2>
+        <div class="custom-select" id="modelSelectWrap">
+          <button id="modelSelectBtn" class="custom-select-btn">-- Aucun --</button>
+          <div id="modelSelectPanel" class="custom-select-panel" style="display:none"></div>
+        </div>
+        <div id="singlePreview"></div>
+      </section>
+
+      <!-- 2. Import -->
+      <section class="panel controls">
+        <h2>2. Importe ton fichier de calcul</h2>
+        <label class="file-btn" for="excelFile">Choisir un fichier de calcul (.xlsx, .xls, .ods, .csv…)</label>
+        <input id="excelFile" type="file" accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.fods,.csv,.tsv,.xml" />
+        <p id="importInfo" class="muted">Aucun fichier importe.</p>
+      </section>
+
+      <!-- 3. Configuration -->
+      <section class="panel controls" id="templateEditor">
+        <h2>3. Configure ton étiquette</h2>
+
+        <!-- Agencements -->
+        <div class="tpl-row arr-bar">
+          <div class="custom-select" id="arrListWrap" style="max-width:160px">
+            <button id="arrListBtn" class="custom-select-btn">Configuration</button>
+            <div id="arrListPanel" class="custom-select-panel" style="display:none"></div>
+          </div>
+          <button type="button" id="saveArrBtn" class="btn-sm">💾 Sauvegarder</button>
+          <button type="button" id="delArrBtn" class="btn-sm danger">Supprimer</button>
+          <button type="button" id="exportArrBtn" class="btn-sm arr-right">📤 Exporter</button>
+          <button type="button" id="importArrBtn" class="btn-sm">📥 Importer</button>
+          <input type="file" id="importArrFile" accept=".json" style="display:none" />
+        </div>
+
+        <p class="muted">Tire les poignées ⋮ pour redimensionner. Clique sur une cellule pour la configurer.</p>
+
+        <!-- Grille interactive -->
+        <div class="grid-scroll">
+          <div id="labelGrid" class="label-grid"></div>
+        </div>
+
+        <!-- Panneau édition cellule -->
+        <div id="cellEditor" class="cell-editor" style="display:none">
+          <h4>Édition cellule <span id="cellEditorTitle"></span></h4>
+          <div class="cell-editor-row">
+            <label>Colonne Excel</label>
+            <select id="ceCol"></select>
+          </div>
+          <div class="cell-editor-row">
+            <label>Police</label>
+            <select id="ceFont">
+              <option value="Space Grotesk">Space Grotesk</option>
+              <option value="DM Serif Display">DM Serif Display</option>
+              <option value="IBM Plex Mono">IBM Plex Mono</option>
+              <option value="Arial" selected>Arial</option>
+              <option value="Helvetica">Helvetica</option>
+              <option value="Times New Roman">Times New Roman</option>
+            </select>
+            <label>Taille</label>
+            <input id="ceSize" type="number" value="8" min="5" max="18" style="width:50px" />
+            <label><input id="ceBold" type="checkbox" /> G</label>
+            <label><input id="ceItalic" type="checkbox" /> I</label>
+          </div>
+          <div class="cell-editor-row">
+            <label>Alignement H</label>
+            <select id="ceAlignH">
+              <option value="left">Gauche</option>
+              <option value="center" selected>Centre</option>
+              <option value="right">Droite</option>
+            </select>
+            <label>Alignement V</label>
+            <select id="ceAlignV">
+              <option value="flex-start">Haut</option>
+              <option value="center" selected>Milieu</option>
+              <option value="flex-end">Bas</option>
+            </select>
+          </div>
+          <button type="button" id="ceDelete" class="btn-sm" style="color:#c00;border-color:#c00">Supprimer la cellule</button>
+          <button type="button" id="ceClose" class="btn-sm">Fermer</button>
+        </div>
+
+        <p id="mapperInfo" class="muted"></p>
+      </section>
+
+      <!-- 4. Générer -->
+      <section class="panel actions">
+        <h2>4. Génère et imprime tes planches</h2>
+        <button id="buildBtn">Générer</button>
+        <button id="printBtn" class="secondary">Roule, ma Boule !</button>
+        <p id="buildInfo" class="muted">Importe un fichier et configure le modèle.</p>
+
+        <!-- Aperçu des planches -->
+        <div id="sheetContainer">
+          <p class="sheet-hint">Clique sur « Générer » pour afficher l'aperçu.</p>
+        </div>
+      </section>
+    </main>
+    <!-- Popup nouvel agencement -->
+    <div id="arrPopup" class="popup-overlay" style="display:none">
+      <div class="popup-box">
+        <p style="margin:0 0 8px;font-weight:600">Nouvel agencement</p>
+        <input id="arrPopupInput" type="text" placeholder="Nom de l'agencement" autocomplete="off" />
+        <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
+          <button id="arrPopupCancel" class="btn-sm">Annuler</button>
+          <button id="arrPopupSave" class="btn-sm" style="background:var(--accent);color:#fff;border-color:var(--accent)">OK</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

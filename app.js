@@ -1,34 +1,105 @@
 /* ================================================================
-   Studio d'étiquettes à piquer — Grille 3 colonnes redimensionnables
+   Impression d'étiquettes — Grille interactive
    ================================================================ */
 
-const ROWS_PER_COL = 22;
-const LABELS_PER_SHEET = ROWS_PER_COL * 2; // 44
 const SCALE = 3;
+
+function tipSVG() {
+  if (!MODEL.lw) return '';
+  return `<svg viewBox="0 0 ${MODEL.tw} ${MODEL.lh}" preserveAspectRatio="none" shape-rendering="crispEdges"><line x1="0" y1="0" x2="${MODEL.tw}" y2="${MODEL.lh/2}" stroke="#999" stroke-width="0.2"/><line x1="0" y1="${MODEL.lh}" x2="${MODEL.tw}" y2="${MODEL.lh/2}" stroke="#999" stroke-width="0.2"/></svg>`;
+}
+
+function applyModelCSS() {
+  if (!MODEL.lw) return;
+  const r = document.documentElement.style;
+  r.setProperty('--lw', MODEL.lw + 'mm');
+  r.setProperty('--lh', MODEL.lh + 'mm');
+  r.setProperty('--bw', MODEL.bw + 'mm');
+  r.setProperty('--tw', MODEL.tw + 'mm');
+  r.setProperty('--tx', MODEL.tx + 'mm');
+  r.setProperty('--gbw', MODEL.gbw + 'mm');
+  r.setProperty('--pw', MODEL.pw + 'mm');
+  r.setProperty('--ph', MODEL.ph + 'mm');
+  const old = document.getElementById('dyn-page');
+  if (old) old.remove();
+  const s = document.createElement('style');
+  s.id = 'dyn-page';
+  s.textContent = `@page { size: ${MODEL.pw}mm ${MODEL.ph}mm; margin: 0; }`;
+  document.head.appendChild(s);
+}
+
+function switchModel(id) {
+  const found = MODELS.find(m => m.id === id);
+  if (!found || found === MODEL) return;
+  MODEL = found;
+  localStorage.setItem(SAVED_MODEL_KEY, MODEL.id);
+
+  // Tout remettre à zéro
+  state.rawRows = [];
+  state.rawHeaders = [];
+  state.records = [];
+  state.labels = [];
+  excelFile.value = '';
+  importInfo.textContent = 'Aucun fichier importe.';
+  buildInfo.textContent = 'Importe un fichier et configure le modèle.';
+  sheetContainer.innerHTML = '<p class="sheet-hint">Clique sur « Générer » pour afficher l\'aperçu.</p>';
+  cellEditor.style.display = 'none';
+  state.selectedCell = null;
+
+  // Mettre à jour le bouton du sélecteur
+  modelSelectBtn.textContent = MODEL.name;
+  modelSelectPanel.querySelectorAll('.custom-select-opt').forEach(o => {
+    o.classList.toggle('selected', o.dataset.id === id);
+  });
+
+  applyModelCSS();
+  state.columns = JSON.parse(JSON.stringify(MODEL.columns));
+  toggleArrBar();
+  renderGrid();
+  refreshPreview();
+}
+
+function toggleArrBar() {
+  const disabled = !MODEL.lw;
+  const fbl = excelFile.previousElementSibling; // label "Choisir un fichier"
+  fbl.style.opacity = disabled ? '0.5' : '';
+  fbl.style.pointerEvents = disabled ? 'none' : '';
+  excelFile.disabled = disabled;
+  arrListBtn.disabled = disabled;
+  arrListBtn.style.opacity = disabled ? '0.5' : '';
+  arrListBtn.style.pointerEvents = disabled ? 'none' : '';
+  saveArrBtn.disabled = disabled;
+  saveArrBtn.style.opacity = disabled ? '0.5' : '';
+  saveArrBtn.style.pointerEvents = disabled ? 'none' : '';
+  delArrBtn.disabled = disabled;
+  delArrBtn.style.opacity = disabled ? '0.5' : '';
+  delArrBtn.style.pointerEvents = disabled ? 'none' : '';
+  exportArrBtn.disabled = disabled;
+  exportArrBtn.style.opacity = disabled ? '0.5' : '';
+  exportArrBtn.style.pointerEvents = disabled ? 'none' : '';
+  importArrBtn.disabled = disabled;
+  importArrBtn.style.opacity = disabled ? '0.5' : '';
+  importArrBtn.style.pointerEvents = disabled ? 'none' : '';
+  buildBtn.disabled = disabled;
+  buildBtn.style.opacity = disabled ? '0.5' : '';
+  printBtn.disabled = disabled;
+  printBtn.style.opacity = disabled ? '0.5' : '';
+}
 
 const state = {
   rawRows: [],
   rawHeaders: [],
   qtyColIdx: 0,
   defaultQty: 1,
-  columns: [
-    { width: 15, lines: [{ colIdx: null, font: 'Arial', size: 8, bold: true, italic: false, alignH: 'center', alignV: 'center' }] },
-    { width: 40, lines: [
-      { colIdx: null, font: 'Arial', size: 8, bold: false, italic: false, alignH: 'left', alignV: 'center' },
-      { colIdx: null, font: 'Arial', size: 7, bold: false, italic: true, alignH: 'left', alignV: 'center' }
-    ]},
-    { width: 40, lines: [
-      { colIdx: null, font: 'Arial', size: 8, bold: false, italic: false, alignH: 'left', alignV: 'center' },
-      { colIdx: null, font: 'Arial', size: 7, bold: false, italic: false, alignH: 'left', alignV: 'center' },
-      { colIdx: null, font: 'Arial', size: 7, bold: false, italic: false, alignH: 'left', alignV: 'center' }
-    ]}
-  ],
+  columns: JSON.parse(JSON.stringify(MODEL.columns)),
   selectedCell: null, // { col: 0, line: 0 }
   records: [],
   labels: [],
 };
 
 /* ---- DOM refs ---- */
+const modelSelectBtn  = document.getElementById("modelSelectBtn");
+const modelSelectPanel= document.getElementById("modelSelectPanel");
 const excelFile      = document.getElementById("excelFile");
 const importInfo     = document.getElementById("importInfo");
 const buildInfo      = document.getElementById("buildInfo");
@@ -42,13 +113,60 @@ const cellEditor     = document.getElementById("cellEditor");
 const cellEditorTitle= document.getElementById("cellEditorTitle");
 const mapperInfo     = document.getElementById("mapperInfo");
 const singlePreviewD = document.getElementById("singlePreview");
-const arrNameInput   = document.getElementById("arrName");
+const arrListBtn     = document.getElementById("arrListBtn");
+const arrListPanel   = document.getElementById("arrListPanel");
 const saveArrBtn     = document.getElementById("saveArrBtn");
-const arrList        = document.getElementById("arrList");
-const loadArrBtn     = document.getElementById("loadArrBtn");
 const delArrBtn      = document.getElementById("delArrBtn");
+const exportArrBtn   = document.getElementById("exportArrBtn");
+const importArrBtn   = document.getElementById("importArrBtn");
+const importArrFile  = document.getElementById("importArrFile");
+const arrPopup       = document.getElementById("arrPopup");
+const arrPopupInput  = document.getElementById("arrPopupInput");
 
 /* ---- Événements ---- */
+modelSelectBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const panel = modelSelectPanel;
+  const open = panel.style.display === 'none';
+  if (open) {
+    document.body.appendChild(panel);
+    const rect = modelSelectBtn.getBoundingClientRect();
+    panel.style.position = 'fixed';
+    panel.style.top = (rect.bottom + 4) + 'px';
+    panel.style.left = rect.left + 'px';
+    panel.style.width = rect.width + 'px';
+    panel.style.display = 'block';
+    arrListPanel.style.display = 'none'; arrListBtn.parentElement.appendChild(arrListPanel); arrListPanel.style.position = '';
+  } else {
+    panel.style.display = 'none';
+    modelSelectBtn.parentElement.appendChild(panel);
+    panel.style.position = ''; panel.style.top = ''; panel.style.left = ''; panel.style.width = '';
+  }
+});
+modelSelectPanel.addEventListener("click", e => {
+  const opt = e.target.closest('.custom-select-opt');
+  if (!opt) return;
+  closeModelPanel();
+  switchModel(opt.dataset.id);
+});
+function closeModelPanel() {
+  modelSelectPanel.style.display = 'none';
+  modelSelectBtn.parentElement.appendChild(modelSelectPanel);
+  modelSelectPanel.style.position = ''; modelSelectPanel.style.top = ''; modelSelectPanel.style.left = ''; modelSelectPanel.style.width = '';
+}
+function closeArrPanel() {
+  arrListPanel.style.display = 'none';
+  arrListBtn.parentElement.appendChild(arrListPanel);
+  arrListPanel.style.position = ''; arrListPanel.style.top = ''; arrListPanel.style.left = ''; arrListPanel.style.width = '';
+}
+// Fermer les panneaux si clic ailleurs
+document.addEventListener("click", e => {
+  if (!e.target.closest('.custom-select')) {
+    closeModelPanel();
+    closeArrPanel();
+  }
+});
+excelFile.addEventListener("change", handleImport);
 excelFile.addEventListener("change", handleImport);
 buildBtn.addEventListener("click", generateAll);
 printBtn.addEventListener("click", () => window.print());
@@ -60,9 +178,87 @@ printBtn.addEventListener("click", () => window.print());
 });
 document.getElementById('ceClose').addEventListener('click', () => { cellEditor.style.display = 'none'; refreshPreview(); });
 document.getElementById('ceDelete').addEventListener('click', deleteCell);
-saveArrBtn.addEventListener("click", saveArrangement);
-loadArrBtn.addEventListener("click", () => { if (arrList.value) loadArrangement(arrList.value); });
+saveArrBtn.addEventListener("click", () => {
+  const current = arrListBtn.textContent;
+  if (current !== 'Configuration' && getArrangements()[current]) {
+    // Already loaded an arrangement → overwrite it directly
+    const map = getArrangements();
+    map[current] = JSON.parse(JSON.stringify(state.columns));
+    saveArrangements(map);
+    mapperInfo.textContent = `Configuration « ${current} » mise à jour.`;
+  } else {
+    // No arrangement loaded → open popup for a new name
+    showNewArrPopup();
+  }
+});
 delArrBtn.addEventListener("click", deleteArrangement);
+
+// Export / Import
+exportArrBtn.addEventListener("click", () => {
+  const map = getArrangements();
+  const json = JSON.stringify(map, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'agencements-1prime.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  mapperInfo.textContent = 'Configurations exportées.';
+});
+importArrBtn.addEventListener("click", () => importArrFile.click());
+importArrFile.addEventListener("change", () => {
+  const file = importArrFile.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      if (typeof imported !== 'object' || Array.isArray(imported)) throw new Error('Format invalide');
+      const map = getArrangements();
+      Object.assign(map, imported);
+      saveArrangements(map);
+      refreshArrList();
+      mapperInfo.textContent = `${Object.keys(imported).length} configuration(s) importée(s).`;
+    } catch (e) {
+      mapperInfo.textContent = 'Fichier invalide.';
+    }
+  };
+  reader.readAsText(file);
+  importArrFile.value = '';
+});
+
+// ArrList : ouverture/fermeture du panneau
+arrListBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const panel = arrListPanel;
+  const open = panel.style.display === 'none';
+  if (open) {
+    // Déplacer dans body pour éviter les problèmes de z-index
+    document.body.appendChild(panel);
+    const rect = arrListBtn.getBoundingClientRect();
+    panel.style.position = 'fixed';
+    panel.style.top = (rect.bottom + 4) + 'px';
+    panel.style.left = rect.left + 'px';
+    panel.style.width = rect.width + 'px';
+    panel.style.display = 'block';
+    modelSelectPanel.style.display = 'none'; modelSelectBtn.parentElement.style.zIndex = '';
+  } else {
+    panel.style.display = 'none';
+    arrListBtn.parentElement.appendChild(panel);
+    panel.style.position = '';
+    panel.style.top = ''; panel.style.left = ''; panel.style.width = '';
+  }
+});
+arrListPanel.addEventListener("click", e => {
+  const opt = e.target.closest('.custom-select-opt');
+  if (!opt) return;
+  closeArrPanel();
+  if (opt.dataset.id === '__new__') {
+    showNewArrPopup();
+  } else {
+    loadArrangement(opt.dataset.id);
+  }
+});
 
 // SW supprimé — pas de cache, toujours la dernière version
 
@@ -127,6 +323,13 @@ function handleImport(e) {
             warnings.push(`« ${sheetName} » ligne ${fileLine} : « ${raw} » n'est pas un entier (arrondi à ${Math.round(parsed)})`);
           }
 
+          // Ignorer les lignes dont toutes les colonnes texte (B+) sont vides
+          const hasText = r.slice(1).some(cell => String(cell ?? "").trim() !== "");
+          if (!hasText) {
+            warnings.push(`« ${sheetName} » ligne ${fileLine} : aucune donnée texte (ligne ignorée)`);
+            return;
+          }
+
           rows.push(r);
         });
       });
@@ -173,7 +376,13 @@ function showTemplateEditor() {
     });
   }
   refreshArrList();
-  if (last && arrMap[last]) arrList.value = last;
+  if (last && arrMap[last]) {
+    arrListBtn.textContent = last;
+    setTimeout(() => {
+      const opt = arrListPanel.querySelector(`[data-id="${last}"]`);
+      if (opt) opt.classList.add('selected');
+    }, 0);
+  }
 
   cellEditor.style.display = 'none';
   state.selectedCell = null;
@@ -185,14 +394,22 @@ function showTemplateEditor() {
 
 function renderGrid() {
   labelGrid.innerHTML = '';
+  if (!MODEL.lw) {
+    labelGrid.style.display = 'none';
+    labelGrid.insertAdjacentHTML('afterend', '<p class="muted" style="text-align:center;padding:20px" id="noModelMsg">Aucun modèle sélectionné</p>');
+    return;
+  }
+  labelGrid.style.display = '';
+  const oldMsg = document.getElementById('noModelMsg');
+  if (oldMsg) oldMsg.remove();
 
-  // Pointe V (droite)
+  // Pointe V
   const v = document.createElement('div');
   v.className = 'label-grid-v';
-  v.innerHTML = '<svg viewBox="0 0 20 11" preserveAspectRatio="none" shape-rendering="crispEdges"><line x1="0" y1="0" x2="20" y2="5.5" stroke="#999" stroke-width="0.2"/><line x1="0" y1="11" x2="20" y2="5.5" stroke="#999" stroke-width="0.2"/></svg>';
+  v.innerHTML = tipSVG();
   labelGrid.appendChild(v);
 
-  // Corps 95mm avec colonnes
+  // Corps avec colonnes
   const body = document.createElement('div');
   body.className = 'label-grid-body';
 
@@ -319,8 +536,13 @@ function deleteCell() {
    APERÇU UNITAIRE
    ================================================================ */
 function refreshPreview() {
+  if (!MODEL.lw) {
+    singlePreviewD.innerHTML = '<p class="muted">Aucun modèle sélectionné</p>';
+    return;
+  }
   if (!state.rawRows.length) {
-    singlePreviewD.innerHTML = '<p class="muted">Importe un fichier de calcul pour voir un aperçu.</p>';
+    singlePreviewD.innerHTML = '';
+    singlePreviewD.appendChild(buildEmptyLabel());
     return;
   }
   singlePreviewD.innerHTML = '';
@@ -373,7 +595,7 @@ function buildFullLabel(row) {
 
   const pt = document.createElement("div");
   pt.className = "label-pt";
-  pt.innerHTML = '<svg viewBox="0 0 20 11" preserveAspectRatio="none" shape-rendering="crispEdges"><line x1="0" y1="0" x2="20" y2="5.5" stroke="#999" stroke-width="0.2"/><line x1="0" y1="11" x2="20" y2="5.5" stroke="#999" stroke-width="0.2"/></svg>';
+  pt.innerHTML = tipSVG();
 
   label.appendChild(body);
   label.appendChild(pt);
@@ -410,8 +632,9 @@ function generateAll() {
     for (let i = 0; i < rec.qty; i++) state.labels.push(rec.rowData);
   });
 
+  const labelsPerSheet = MODEL.cols * MODEL.rowsPerCol;
   const total = state.labels.length;
-  buildInfo.textContent = `${total} étiquettes sur ${Math.ceil(total / LABELS_PER_SHEET)} planche(s).`;
+  buildInfo.textContent = `${total} étiquettes sur ${Math.ceil(total / labelsPerSheet)} planche(s).`;
   renderSheets();
 }
 
@@ -428,19 +651,34 @@ function saveArrangements(map) { localStorage.setItem(ARR_KEY, JSON.stringify(ma
 
 function refreshArrList() {
   const map = getArrangements();
-  arrList.innerHTML = Object.keys(map).map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+  const names = Object.keys(map);
+  arrListPanel.innerHTML = names.map(n =>
+    `<button class="custom-select-opt" data-id="${escHtml(n)}">${escHtml(n)}</button>`).join('')
+    + `<button class="custom-select-opt" data-id="__new__" style="color:var(--accent);font-weight:600">+ Nouvelle</button>`;
+  if (!names.length) arrListBtn.textContent = 'Configuration';
 }
 
-function saveArrangement() {
-  const name = arrNameInput.value.trim();
-  if (!name) { mapperInfo.textContent = "Donne un nom à l'agencement avant de sauvegarder."; return; }
+function showNewArrPopup() {
+  arrPopup.style.display = 'flex';
+  arrPopupInput.value = '';
+  setTimeout(() => arrPopupInput.focus(), 100);
+}
+arrPopupInput.addEventListener("keydown", e => { if (e.key === 'Enter') doSaveNewArr(); });
+document.getElementById("arrPopupSave").addEventListener("click", doSaveNewArr);
+document.getElementById("arrPopupCancel").addEventListener("click", () => { arrPopup.style.display = 'none'; });
+arrPopup.addEventListener("click", e => { if (e.target === arrPopup) arrPopup.style.display = 'none'; });
+
+function doSaveNewArr() {
+  const name = arrPopupInput.value.trim();
+  if (!name) return;
+  arrPopup.style.display = 'none';
   const map = getArrangements();
   map[name] = JSON.parse(JSON.stringify(state.columns));
   saveArrangements(map);
   localStorage.setItem(LAST_KEY, name);
   refreshArrList();
-  arrList.value = name;
-  mapperInfo.textContent = `Agencement « ${name} » sauvegardé.`;
+  arrListBtn.textContent = name;
+  mapperInfo.textContent = `Configuration « ${name} » sauvegardée.`;
 }
 
 function loadArrangement(name) {
@@ -451,18 +689,20 @@ function loadArrangement(name) {
   localStorage.setItem(LAST_KEY, name);
   renderGrid();
   refreshPreview();
-  mapperInfo.textContent = `Agencement « ${name} » chargé.`;
+  arrListBtn.textContent = name;
+  mapperInfo.textContent = `Configuration « ${name} » chargée.`;
 }
 
 function deleteArrangement() {
-  const name = arrList.value;
-  if (!name) return;
+  const name = arrListBtn.textContent;
+  if (name === 'Configuration' || !getArrangements()[name]) return;
   const map = getArrangements();
   delete map[name];
   saveArrangements(map);
   if (localStorage.getItem(LAST_KEY) === name) localStorage.removeItem(LAST_KEY);
+  arrListBtn.textContent = 'Configuration';
   refreshArrList();
-  mapperInfo.textContent = `Agencement « ${name} » supprimé.`;
+  mapperInfo.textContent = `Configuration « ${name} » supprimée.`;
 }
 
 /* ================================================================
@@ -470,23 +710,29 @@ function deleteArrangement() {
    ================================================================ */
 function renderSheets() {
   sheetContainer.innerHTML = "";
-  const pages = chunk(state.labels, LABELS_PER_SHEET);
+  const labelsPerSheet = MODEL.cols * MODEL.rowsPerCol;
+  if (!labelsPerSheet) return;
+  const pages = chunk(state.labels, labelsPerSheet);
   pages.forEach(pageRows => {
     const page = document.createElement("article");
     page.className = "sheet-page";
-    const leftCol = document.createElement("div");
-    leftCol.className = "sheet-column left";
-    const rightCol = document.createElement("div");
-    rightCol.className = "sheet-column right";
 
-    for (let row = 0; row < ROWS_PER_COL; row++) {
-      const l = pageRows[row] ? buildFullLabel(pageRows[row]) : buildEmptyLabel();
-      const r = pageRows[ROWS_PER_COL + row] ? buildFullLabel(pageRows[ROWS_PER_COL + row]) : buildEmptyLabel();
-      leftCol.appendChild(l);
-      rightCol.appendChild(r);
+    for (let c = 0; c < MODEL.cols; c++) {
+      const m = MODEL.margins[c];
+      const col = document.createElement("div");
+      col.className = "sheet-column";
+      col.style.top = m.top + 'mm';
+      if (c === 0) col.classList.add('left');
+      else if (c === MODEL.cols - 1) col.classList.add('right');
+
+      for (let row = 0; row < MODEL.rowsPerCol; row++) {
+        const idx = c * MODEL.rowsPerCol + row;
+        const el = pageRows[idx] ? buildFullLabel(pageRows[idx]) : buildEmptyLabel();
+        if (m.rotate) el.style.transform = `rotate(${m.rotate}deg)`;
+        col.appendChild(el);
+      }
+      page.appendChild(col);
     }
-    page.appendChild(leftCol);
-    page.appendChild(rightCol);
     sheetContainer.appendChild(page);
   });
 }
@@ -498,7 +744,7 @@ function buildEmptyLabel() {
   body.className = "label-body";
   body.innerHTML = '<div style="flex:1">&nbsp;</div>';
   label.appendChild(body);
-  label.innerHTML += '<div class="label-pt"><svg viewBox="0 0 20 11" preserveAspectRatio="none" shape-rendering="crispEdges"><line x1="0" y1="0" x2="20" y2="5.5" stroke="#999" stroke-width="0.2"/><line x1="0" y1="11" x2="20" y2="5.5" stroke="#999" stroke-width="0.2"/></svg></div>';
+  label.innerHTML += `<div class="label-pt">${tipSVG()}</div>`;
   return label;
 }
 
@@ -509,6 +755,22 @@ function colLetter(i) { return String.fromCharCode(65 + i); }
 function escHtml(s) { return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"); }
 function chunk(items, size) { const out = []; for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size)); return out; }
 
-/* ---- Initialisation : afficher le modèle et l'aperçu dès le chargement ---- */
+/* ---- Initialisation ---- */
+(function initModelSelect() {
+  MODELS.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'custom-select-opt';
+    btn.dataset.id = m.id;
+    btn.textContent = m.name;
+    modelSelectPanel.appendChild(btn);
+  });
+  if (MODEL.lw) {
+    modelSelectBtn.textContent = MODEL.name;
+    modelSelectPanel.querySelector(`[data-id="${MODEL.id}"]`)?.classList.add('selected');
+    applyModelCSS();
+  }
+})();
+refreshArrList();
+toggleArrBar();
 renderGrid();
 refreshPreview();

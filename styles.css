@@ -50,7 +50,7 @@ body {
 
 header {
   margin: 0 auto 20px;
-  max-width: 1200px;
+  max-width: 900px;
   animation: reveal 0.6s ease;
 }
 
@@ -82,6 +82,45 @@ main {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* ---- Sélecteur modèle maison ---- */
+.custom-select { position: relative; display: inline-block; min-width: 240px; }
+.custom-select-btn {
+  width: 100%; font: inherit; font-size: 0.9rem;
+  border: 1px solid #bfd0bf; border-radius: 10px;
+  padding: 8px 28px 8px 10px; background: #fff;
+  text-align: left; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%23314935' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+.custom-select-panel {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+  background: #fff; border: 1px solid #bfd0bf; border-radius: 10px;
+  margin-top: 4px; overflow: hidden; box-shadow: var(--shadow);
+}
+.custom-select-opt {
+  display: block; width: 100%; font: inherit; font-size: 0.85rem;
+  padding: 8px 12px; border: none; background: #fff; text-align: left;
+  cursor: pointer;
+}
+.custom-select-opt:hover,
+.custom-select-opt.selected { background: var(--accent-soft); }
+
+/* Popup nouvel agencement */
+.popup-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.3); z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+}
+.popup-box {
+  background: #fff; border-radius: 14px; padding: 18px 22px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18); min-width: 280px;
+}
+.popup-box input {
+  width: 100%; border: 1px solid #bfd0bf; border-radius: 10px;
+  padding: 8px 10px; font: inherit; font-size: 0.9rem;
 }
 
 /* Tous les panneaux : largeur uniforme */
@@ -119,6 +158,9 @@ button {
   padding: 10px 12px;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
 }
 
 .file-btn,
@@ -188,9 +230,13 @@ input[type="number"] {
 }
 
 /* ===== Grille éditeur : forme exacte de l'étiquette ===== */
+.grid-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .label-grid {
-  width: 115mm;
-  height: 11mm;
+  width: var(--lw);
+  height: var(--lh);
   margin: 10px auto;
   position: relative;
   background: #fff;
@@ -198,17 +244,18 @@ input[type="number"] {
   border-radius: 3px;
   user-select: none;
   overflow: hidden;
+  min-width: var(--lw);
 }
 
-/* Corps 95mm + pointe V 20mm */
+/* Corps + pointe V */
 .label-grid-body {
   position: absolute; top: 0; bottom: 0; left: 0;
-  width: 95mm; display: flex;
+  width: var(--gbw); display: flex;
   z-index: 1;
 }
 .label-grid-v {
   position: absolute; top: 0; bottom: 0;
-  left: 95mm; width: 20mm;
+  left: var(--tx); width: var(--tw);
   z-index: 2;
 }
 .label-grid-v svg {
@@ -323,15 +370,17 @@ input[type="number"] {
 
 /* Single preview */
 #singlePreview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 8px;
+  display: block;
+  text-align: center;
 }
 #singlePreview .label {
   border: 1px solid var(--accent);
   border-radius: 2px;
+  display: inline-flex;
+  text-align: left;
 }
 
 .btn-sm {
@@ -357,9 +406,15 @@ input[type="number"] {
   color: #fff;
 }
 .arr-bar {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+.arr-right { margin-left: auto; }
+@media screen and (max-width: 860px) {
+  .arr-right { margin-left: 0; }
 }
 
 #sheetContainer {
@@ -381,8 +436,8 @@ input[type="number"] {
 
 /* ---- Page A4 portrait ---- */
 .sheet-page {
-  width: 210mm;
-  min-height: 297mm;
+  width: var(--pw);
+  min-height: var(--ph);
   background: #fff;
   border: 1px solid #d9e7d4;
   margin: 0 auto 14px;
@@ -390,42 +445,32 @@ input[type="number"] {
   overflow: hidden;
 }
 
-/* ---- Colonne gauche : top 30.25mm ---- */
-.sheet-column.left {
+/* ---- Colonnes : top défini en JS selon le modèle ---- */
+.sheet-column {
   position: absolute;
-  top: 30.25mm;
   left: 0;
-  width: 115mm;
+  width: var(--lw);
   display: flex;
   flex-direction: column;
 }
 
-/* ---- Colonne droite : top 24.75mm, rotatée 180° ---- */
 .sheet-column.right {
-  position: absolute;
-  top: 24.75mm;
+  left: auto;
   right: 0;
-  width: 115mm;
-  display: flex;
-  flex-direction: column;
 }
 
-.sheet-column.right .label {
-  transform: rotate(180deg);
-}
-
-/* ---- Étiquette : 115mm de large (105 corps + 10 dépassement pointe) ---- */
+/* ---- Étiquette : largeur variable selon modèle ---- */
 .label {
-  width: 115mm;
-  height: 11mm;
+  width: var(--lw);
+  height: var(--lh);
   position: relative;
   display: flex;
   align-items: center;
 }
 
-/* Corps 105mm */
+/* Corps (contenu texte) */
 .label-body {
-  width: 105mm;
+  width: var(--bw);
   height: 100%;
   display: flex;
   align-items: center;
@@ -435,13 +480,13 @@ input[type="number"] {
   z-index: 1;
 }
 
-/* Trait horizontal entre étiquettes : s'arrête à 95mm */
+/* Trait horizontal entre étiquettes : s'arrête au début de la pointe */
 .label-body::after {
   content: '';
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 95mm;
+  width: var(--tx);
   height: 0;
   border-bottom: 0.15mm solid #999;
 }
@@ -453,7 +498,7 @@ input[type="number"] {
   position: absolute;
   top: 0;
   left: 0;
-  width: 95mm;
+  width: var(--tx);
   height: 0;
   border-top: 0.15mm solid #999;
 }
@@ -471,13 +516,13 @@ input[type="number"] {
 .label-text-left { text-align: right; }
 .label-text-right { text-align: left; }
 
-/* Pointe en V : SVG inline, de 95mm à 115mm */
+/* Pointe en V : SVG inline */
 .label-pt {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 95mm;
-  width: 20mm;
+  left: var(--tx);
+  width: var(--tw);
   z-index: 2;
 }
 
@@ -564,8 +609,8 @@ input[type="number"] {
   }
 
   .sheet-page {
-    width: 210mm;
-    min-height: 297mm;
+    width: var(--pw);
+    min-height: var(--ph);
     border: none;
     margin: 0;
     transform: none !important;
@@ -574,10 +619,5 @@ input[type="number"] {
 
   .sheet-page:last-child {
     page-break-after: auto;
-  }
-
-  @page {
-    size: A4 portrait;
-    margin: 0;
   }
 }
