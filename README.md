@@ -1,8 +1,8 @@
-# 🌱 Studio d'étiquettes horticoles 11×115 mm
+# 1prime tes étiquettes
 
-Application **locale** — fonctionne **hors-ligne**, sans serveur, sur **Linux et Windows** (et tout système avec un navigateur moderne).
+Application **locale** — fonctionne **hors-ligne**, sans serveur, sur **Linux et Windows** (et tout navigateur moderne).
 
-> **Un seul code HTML/CSS/JS.** Importez un fichier Excel, construisez votre modèle d'étiquette, générez vos planches A4 en ciseaux et imprimez.
+> **Un seul code HTML/CSS/JS.** Choisis un modèle d'étiquette, importe un fichier de calcul, configure le style, génère tes planches A4 et imprime. **Roule, ma Boule !**
 
 ---
 
@@ -16,39 +16,36 @@ Option bureau : modifier `etiquettes.desktop` avec le bon chemin puis le copier 
 ### Windows
 Double-cliquer sur **`Lancer-Etiquettes.bat`**.
 
-### Alternative (serveur local, optionnel)
-Si besoin d'un serveur HTTP local :
-```bash
-npm start        # lance le serveur sur http://127.0.0.1:3210 et ouvre l'app
-```
-
 ---
 
 ## 📋 Fonctionnalités
 
-- 📥 **Import de fichier de calcul** (.xlsx, .xls, .xlsm, .xlsb, .ods, .fods, .csv…) — Excel, LibreOffice Calc et autres, détection multi-onglets
-- 🔤 **Sélection par lettres** (A→J) — chaque cellule du modèle lit la colonne Excel choisie
-- 🎨 **Style personnalisable** — police, taille, gras, italique, alignements H/V, 3 lignes redimensionnables (poignées ⋮), colonne verticale pour le prix
-- 💾 **Agencements** — sauvegarde / chargement / suppression, avec **auto-chargement du dernier utilisé**
-- 👁️ **Aperçu échantillon** — 6 étiquettes visibles avant génération
-- 🖨️ **Impression directe** — planches A4 prêtes à imprimer (Ctrl+P)
-- 📴 **100 % hors-ligne** — tous les fichiers (styles, polices, moteur Excel) sont locaux
+- 🏷️ **Sélecteur de modèle** — extensible (`formats/models.js`), démarre sur « Aucun »
+- 📥 **Import de fichier de calcul** — Excel, LibreOffice Calc, CSV et bien d'autres (.xlsx, .xls, .ods, .csv…)
+- 🔤 **Sélection par lettres B→J** — chaque cellule du modèle lit la colonne choisie (colonne A = quantités, réservée)
+- 🎨 **Style personnalisable** — police, taille, gras, italique, alignements H/V, colonnes redimensionnables (poignées ⋮)
+- 💾 **Configurations** — sauvegarde, chargement automatique, suppression, export/import JSON
+- 👁️ **Aperçu** — format réel de l'étiquette, scroll horizontal sur petits écrans
+- 🖨️ **Impression** — planches A4 générées, prêtes à imprimer
+- 📴 **100 % hors-ligne** — polices, moteur de calcul, tout est local
+- 🔒 **Sections désactivées** quand aucun modèle n'est sélectionné (import, configuration, génération)
 
 ---
 
-## 📥 Règles d'import Excel
+## 📥 Règles d'import
 
-- L'app parcourt **tous les onglets** du classeur.
-- Un onglet n'est retenu que si sa cellule **A1 contient « nombre » / « Nombre »** (les autres onglets sont ignorés).
+- L'app parcourt **tous les onglets** du fichier.
+- Un onglet n'est retenu que si sa cellule **A1 contient « nombre » / « Nombre »** (les autres sont ignorés).
 - **Colonne A = quantité** (nombre d'étiquettes à imprimer).
-- Les lignes sans nombre en colonne A sont ignorées.
+- Lignes sans nombre en colonne A → ignorées.
 - Quantité **0** → avertissement « faute de frappe ? », ligne ignorée.
 - Quantité **décimale** → avertissement « arrondi à N ».
-- Les colonnes **B et suivantes** contiennent les informations à placer sur l'étiquette (sélection par lettre A→J dans le modèle).
+- Lignes dont toutes les colonnes B+ sont vides → ignorées.
+- Les colonnes **B→J** contiennent les infos à placer (sélection par lettre dans la config).
 
 ---
 
-## 📐 Format d'impression
+## 📐 Format d'impression (modèle 11×115 mm)
 
 | Paramètre | Valeur |
 |-----------|--------|
@@ -58,26 +55,45 @@ npm start        # lance le serveur sur http://127.0.0.1:3210 et ouvre l'app
 | Disposition | « en ciseaux » — colonne droite inversée (180°) et décalée de +5,5 mm |
 | Haut colonne gauche | 30,25 mm |
 | Haut colonne droite | 24,75 mm |
-| Marges G/D | 0 mm |
+
+---
+
+## 🔧 Ajouter un modèle
+
+Éditer `formats/models.js` et ajouter une entrée dans `MODELS` :
+
+```js
+{
+  id: "monformat",  name: "Mon format 80×40 mm",
+  lw:80, lh:40,   bw:60,   tw:20, tx:60,   gbw:60,
+  pw:210, ph:297,
+  layout:"ciseaux",  cols:2,  rowsPerCol:10,
+  columns: [ /* colonnes de texte */ ],
+  margins:[ { top:10, rotate:0 }, { top:12, rotate:180 } ]
+}
+```
+
+Le nouveau modèle apparaît automatiquement dans le sélecteur.
 
 ---
 
 ## 🔧 Développement
 
-```bash
-npm start          # Serveur local (port 3210) — optionnel, l'app marche aussi en file://
-```
-
 Structure :
 - `index.html` — page principale
-- `app.js` — toute la logique (import, modèle, génération, agencements)
-- `styles.css` — styles écran + impression
-- `assets/` — `xlsx.full.min.js` (lecture Excel), `fonts/` (polices locales)
+- `app.js` — toute la logique (import, modèle, configuration, génération)
+- `styles.css` — styles écran + impression (variables CSS dynamiques)
+- `formats/models.js` — catalogue des modèles d'étiquettes
+- `assets/` — `xlsx.full.min.js` (lecture de fichiers), `fonts/` (polices locales)
+
+```bash
+npm start          # Serveur local (port 3210) — optionnel, l'app marche en file://
+```
 
 ---
 
 ## 🔮 À venir (multiplateforme)
 
-Le même code est destiné à être embarqué dans des enveloppes natives :
+Le même code pourra être embarqué dans des enveloppes natives :
 - **Desktop** : Electron → AppImage (Linux) et .exe (Windows)
-- **Android** : Capacitor → .apk (avec impression via le plugin `@capacitor-community/printer`)
+- **Android** : Capacitor → .apk (avec impression via `@capacitor-community/printer`)
