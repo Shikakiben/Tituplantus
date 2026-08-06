@@ -30,3 +30,20 @@
   font-display: swap;
   src: url('ibmplexmono-600.woff2') format('woff2');
 }
+
+/* Calligraphique */
+@font-face {
+  font-family: 'Tangerine';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('tangerine-400.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Tangerine';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('tangerine-700.ttf') format('truetype');
+}

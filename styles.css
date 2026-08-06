@@ -70,6 +70,14 @@ h1 {
   font-weight: 400;
 }
 
+.logo-1 {
+  font-family: 'Tangerine', cursive;
+  font-weight: 700;
+  font-size: 2.2em;
+  line-height: 0.6;
+  vertical-align: baseline;
+}
+
 .subtitle {
   margin: 0;
   max-width: 900px;
@@ -240,8 +248,6 @@ input[type="number"] {
   margin: 10px auto;
   position: relative;
   background: #fff;
-  border: 1px solid #999;
-  border-radius: 3px;
   user-select: none;
   overflow: hidden;
   min-width: var(--lw);
@@ -252,6 +258,9 @@ input[type="number"] {
   position: absolute; top: 0; bottom: 0; left: 0;
   width: var(--gbw); display: flex;
   z-index: 1;
+  border: 1px solid #999;
+  border-right: none;
+  border-radius: 2px 0 0 2px;
 }
 .label-grid-v {
   position: absolute; top: 0; bottom: 0;
@@ -377,10 +386,18 @@ input[type="number"] {
   text-align: center;
 }
 #singlePreview .label {
-  border: 1px solid var(--accent);
-  border-radius: 2px;
   display: inline-flex;
   text-align: left;
+}
+#singlePreview .label-body {
+  width: var(--tx);
+  border: 1px solid var(--accent);
+  border-right: none;
+  border-radius: 2px 0 0 2px;
+  box-sizing: border-box;
+}
+#singlePreview .label-pt {
+  left: var(--tx);
 }
 
 .btn-sm {
