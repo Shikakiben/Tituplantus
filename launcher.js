@@ -52,7 +52,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
   const url = `http://${HOST}:${PORT}`;
-  console.log(`  Tituplantus Nomen Plantae  -  ${url}`);
+  console.log(`  Tituplantus  -  ${url}`);
   console.log("  Fermer cette fenetre pour arreter.");
   console.log("");
   openAppWindow(url);

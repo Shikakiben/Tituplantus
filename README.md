@@ -1,4 +1,4 @@
-# Tituplantus Nomen Plantae
+# Tituplantus
 
 Application **locale** — fonctionne **hors-ligne**, sans serveur, sur **Linux et Windows** (et tout navigateur moderne).
 
