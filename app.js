@@ -200,7 +200,7 @@ exportArrBtn.addEventListener("click", () => {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'agencements-1prime.json';
+  a.href = url; a.download = 'agencements-tituplantus.json';
   a.click();
   URL.revokeObjectURL(url);
   mapperInfo.textContent = 'Configurations exportées.';

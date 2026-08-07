@@ -1,4 +1,4 @@
-# 1prime tes étiquettes
+# Tituplantus Nomen Plantae
 
 Application **locale** — fonctionne **hors-ligne**, sans serveur, sur **Linux et Windows** (et tout navigateur moderne).
 
