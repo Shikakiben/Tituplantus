@@ -97,3 +97,13 @@ npm start          # Serveur local (port 3210) — optionnel, l'app marche en fi
 Le même code pourra être embarqué dans des enveloppes natives :
 - **Desktop** : Electron → AppImage (Linux) et .exe (Windows)
 - **Android** : Capacitor → .apk (avec impression via `@capacitor-community/printer`)
+
+---
+
+## 📜 Licence
+
+**Tituplantus** est distribué sous la **GNU General Public License v3.0** (GPL-3.0).
+
+Vous pouvez utiliser, modifier et distribuer ce logiciel librement, mais toute version modifiée ou dérivée doit être publiée sous la même licence, avec son code source. Voir le fichier [`LICENSE`](LICENSE) pour le texte complet.
+
+© Tituplantus — tous droits réservés sur le nom et le contenu original.

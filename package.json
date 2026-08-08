@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Lancement un clic de l'application d'etiquettes horticoles.",
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "node launcher.js"
   }
