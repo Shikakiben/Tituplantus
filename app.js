@@ -41,7 +41,7 @@ function switchModel(id) {
   state.labels = [];
   excelFile.value = '';
   importInfo.textContent = 'Aucun fichier importe.';
-  buildInfo.textContent = 'Importe un fichier et configure le modèle.';
+  clearBuildInfo();
   sheetContainer.innerHTML = '<p class="sheet-hint">Clique sur « Générer » pour afficher l\'aperçu.</p>';
   cellEditor.style.display = 'none';
   state.selectedCell = null;
@@ -122,6 +122,23 @@ const importArrBtn   = document.getElementById("importArrBtn");
 const importArrFile  = document.getElementById("importArrFile");
 const arrPopup       = document.getElementById("arrPopup");
 const arrPopupInput  = document.getElementById("arrPopupInput");
+
+/* ---- Message contextuel section 4 ---- */
+function updateBuildInfo() {
+  buildInfo.style.display = '';
+  if (!MODEL.lw) {
+    buildInfo.textContent = "Rien à générer pour l'instant. Choisis d'abord un modèle (étape 1) ci-dessus.";
+  } else if (!state.rawRows.length) {
+    buildInfo.textContent = "Rien à générer pour l'instant. Importe ton fichier (étape 2) puis configure ta grille (étape 3) ci-dessus.";
+  } else {
+    buildInfo.textContent = "Tout est prêt : vérifie la grille (étape 3) si besoin, puis clique sur « Générer ».";
+  }
+}
+
+function clearBuildInfo() {
+  buildInfo.textContent = '';
+  buildInfo.style.display = 'none';
+}
 
 /* ---- Événements ---- */
 modelSelectBtn.addEventListener("click", (e) => {
@@ -387,7 +404,7 @@ function showTemplateEditor() {
   cellEditor.style.display = 'none';
   state.selectedCell = null;
   templateEditor.style.display = "block";
-  buildInfo.textContent = "Configure la grille, puis génère.";
+  clearBuildInfo();
   renderGrid();
   refreshPreview();
 }
@@ -606,7 +623,7 @@ function buildFullLabel(row) {
    GÉNÉRATION COMPLÈTE
    ================================================================ */
 function generateAll() {
-  if (!state.rawRows.length) { buildInfo.textContent = "Importe d'abord un fichier Excel."; return; }
+  if (!state.rawRows.length) { updateBuildInfo(); return; }
 
   state.records = [];
   state.rawRows.forEach(row => {
@@ -634,6 +651,7 @@ function generateAll() {
 
   const labelsPerSheet = MODEL.cols * MODEL.rowsPerCol;
   const total = state.labels.length;
+  buildInfo.style.display = '';
   buildInfo.textContent = `${total} étiquettes sur ${Math.ceil(total / labelsPerSheet)} planche(s).`;
   renderSheets();
 }
@@ -772,5 +790,6 @@ function chunk(items, size) { const out = []; for (let i = 0; i < items.length; 
 })();
 refreshArrList();
 toggleArrBar();
+clearBuildInfo();
 renderGrid();
 refreshPreview();
