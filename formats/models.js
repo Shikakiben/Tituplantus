@@ -9,7 +9,7 @@ const MODELS = [
     id: "_aucun",  name: "-- Aucun --",
     lw:0, lh:0,   bw:0,   tw:0, tx:0,   gbw:0,
     pw:0, ph:0,
-    layout:"aucun",  cols:0,  rowsPerCol:0,
+    cols:0,  rowsPerCol:0,
     columns: [],
     margins: []
   },
@@ -17,9 +17,10 @@ const MODELS = [
     id: "11x115",  name: "Étiquette à piquer 11×115 mm",
     lw:115, lh:11,   bw:105,   tw:20, tx:95,   gbw:95,
     pw:210, ph:297,
-    layout:"ciseaux",  cols:2,  rowsPerCol:22,
+    cols:2,  rowsPerCol:22,
     columns: [
-      { width:15, lines:[{ colIdx:null, font:'Arial', size:8, bold:true,  italic:false, alignH:'center', alignV:'center' }] },
+      // vertical:true → texte vertical (colonne « prix »). Omettez ce champ pour une colonne normale.
+      { width:15, vertical:true, lines:[{ colIdx:null, font:'Arial', size:8, bold:true,  italic:false, alignH:'center', alignV:'center' }] },
       { width:40, lines:[
         { colIdx:null, font:'Arial', size:8, bold:false, italic:false, alignH:'left', alignV:'center' },
         { colIdx:null, font:'Arial', size:7, bold:false, italic:true,  alignH:'left', alignV:'center' }

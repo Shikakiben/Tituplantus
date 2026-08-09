@@ -67,8 +67,15 @@ Double-cliquer sur **`Lancer-Tituplantus.bat`**.
   id: "monformat",  name: "Mon format 80×40 mm",
   lw:80, lh:40,   bw:60,   tw:20, tx:60,   gbw:60,
   pw:210, ph:297,
-  layout:"ciseaux",  cols:2,  rowsPerCol:10,
-  columns: [ /* colonnes de texte */ ],
+  cols:2,  rowsPerCol:10,
+  columns: [
+    // 1 entrée par colonne de texte :
+    //   vertical:true → colonne lue verticalement (colonne « prix »), sinon horizontale
+    { width:15, vertical:true, lines:[ /* lignes de texte */ ] }
+  ],
+  // 1 entrée par colonne de planche :
+  //   top    = marge haute (mm)
+  //   rotate = 180 → colonne inversée (disposition « en ciseaux »), 0 → normale
   margins:[ { top:10, rotate:0 }, { top:12, rotate:180 } ]
 }
 ```

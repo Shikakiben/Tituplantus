@@ -384,7 +384,7 @@ function renderGrid() {
     const colEl = document.createElement('div');
     colEl.className = 'grid-col';
     colEl.style.width = col.width + 'mm';
-    if (ci === 0) colEl.classList.add('grid-col-price');
+    if (col.vertical) colEl.classList.add('grid-col-price');
     else if (ci === state.columns.length - 1) colEl.classList.add('grid-col-last');
     else colEl.classList.add('grid-col-mid');
 
@@ -537,8 +537,8 @@ function buildFullLabel(row) {
       cell.style.padding = '0 1mm';
       cell.style.lineHeight = '1.1';
 
-      // Colonne prix : texte vertical
-      if (ci === 0) {
+      // Colonne verticale (ex. prix) : texte tourné — activée par col.vertical dans le modèle
+      if (col.vertical) {
         cell.style.writingMode = 'vertical-rl';
         cell.style.transform = 'rotate(180deg)';
       }
