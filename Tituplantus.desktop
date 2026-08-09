@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Tituplantus
+Comment=Avec Tituplantus, libelle ton hortus
+Exec=/home/moi/Tituplantus/Lancer-Tituplantus.sh
+Icon=/home/moi/Tituplantus/assets/icon-512.png
+Terminal=false
+Type=Application
+Categories=Office;Printing;
+StartupWMClass=tituplantus

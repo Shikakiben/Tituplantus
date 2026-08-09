@@ -74,12 +74,6 @@ function toggleArrBar() {
   delArrBtn.disabled = disabled;
   delArrBtn.style.opacity = disabled ? '0.5' : '';
   delArrBtn.style.pointerEvents = disabled ? 'none' : '';
-  exportArrBtn.disabled = disabled;
-  exportArrBtn.style.opacity = disabled ? '0.5' : '';
-  exportArrBtn.style.pointerEvents = disabled ? 'none' : '';
-  importArrBtn.disabled = disabled;
-  importArrBtn.style.opacity = disabled ? '0.5' : '';
-  importArrBtn.style.pointerEvents = disabled ? 'none' : '';
   buildBtn.disabled = disabled;
   buildBtn.style.opacity = disabled ? '0.5' : '';
   printBtn.disabled = disabled;
@@ -117,11 +111,9 @@ const arrListBtn     = document.getElementById("arrListBtn");
 const arrListPanel   = document.getElementById("arrListPanel");
 const saveArrBtn     = document.getElementById("saveArrBtn");
 const delArrBtn      = document.getElementById("delArrBtn");
-const exportArrBtn   = document.getElementById("exportArrBtn");
-const importArrBtn   = document.getElementById("importArrBtn");
-const importArrFile  = document.getElementById("importArrFile");
+const arrFolderInput = document.getElementById("arrFolderInput");
 const arrPopup       = document.getElementById("arrPopup");
-const arrPopupInput  = document.getElementById("arrPopupInput");
+// Note: arrPopupInput est recréé dynamiquement, utiliser getElementById
 
 /* ---- Message contextuel section 4 ---- */
 function updateBuildInfo() {
@@ -184,7 +176,6 @@ document.addEventListener("click", e => {
   }
 });
 excelFile.addEventListener("change", handleImport);
-excelFile.addEventListener("change", handleImport);
 buildBtn.addEventListener("click", generateAll);
 printBtn.addEventListener("click", () => window.print());
 
@@ -196,53 +187,15 @@ printBtn.addEventListener("click", () => window.print());
 document.getElementById('ceClose').addEventListener('click', () => { cellEditor.style.display = 'none'; refreshPreview(); });
 document.getElementById('ceDelete').addEventListener('click', deleteCell);
 saveArrBtn.addEventListener("click", () => {
-  const current = arrListBtn.textContent;
-  if (current !== 'Configuration' && getArrangements()[current]) {
-    // Already loaded an arrangement → overwrite it directly
-    const map = getArrangements();
-    map[current] = JSON.parse(JSON.stringify(state.columns));
-    saveArrangements(map);
-    mapperInfo.textContent = `Configuration « ${current} » mise à jour.`;
+  if (currentArrName && currentArrData) {
+    currentArrData = JSON.parse(JSON.stringify(state.columns));
+    downloadArrFile(currentArrName, currentArrData);
+    mapperInfo.textContent = `Configuration « ${currentArrName} » sauvegardée.`;
   } else {
-    // No arrangement loaded → open popup for a new name
     showNewArrPopup();
   }
 });
 delArrBtn.addEventListener("click", deleteArrangement);
-
-// Export / Import
-exportArrBtn.addEventListener("click", () => {
-  const map = getArrangements();
-  const json = JSON.stringify(map, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'agencements-tituplantus.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  mapperInfo.textContent = 'Configurations exportées.';
-});
-importArrBtn.addEventListener("click", () => importArrFile.click());
-importArrFile.addEventListener("change", () => {
-  const file = importArrFile.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const imported = JSON.parse(reader.result);
-      if (typeof imported !== 'object' || Array.isArray(imported)) throw new Error('Format invalide');
-      const map = getArrangements();
-      Object.assign(map, imported);
-      saveArrangements(map);
-      refreshArrList();
-      mapperInfo.textContent = `${Object.keys(imported).length} configuration(s) importée(s).`;
-    } catch (e) {
-      mapperInfo.textContent = 'Fichier invalide.';
-    }
-  };
-  reader.readAsText(file);
-  importArrFile.value = '';
-});
 
 // ArrList : ouverture/fermeture du panneau
 arrListBtn.addEventListener("click", (e) => {
@@ -270,14 +223,13 @@ arrListPanel.addEventListener("click", e => {
   const opt = e.target.closest('.custom-select-opt');
   if (!opt) return;
   closeArrPanel();
-  if (opt.dataset.id === '__new__') {
+  if (opt.dataset.id === '__load__') {
+    arrFolderInput.click();
+  } else if (opt.dataset.id === '__new__') {
     showNewArrPopup();
-  } else {
-    loadArrangement(opt.dataset.id);
   }
+  // __active__ = rien, juste pour affichage
 });
-
-// SW supprimé — pas de cache, toujours la dernière version
 
 /* ================================================================
    IMPORT
@@ -378,11 +330,9 @@ function handleImport(e) {
 function showTemplateEditor() {
   const hdrs = state.rawHeaders;
 
-  // Agencement : reprendre le dernier sauvegardé, sinon auto-affectation B→G
-  const arrMap = getArrangements();
-  const last = localStorage.getItem(LAST_KEY);
-  if (last && arrMap[last]) {
-    state.columns = JSON.parse(JSON.stringify(arrMap[last]));
+  // Agencement : reprendre la config active, sinon auto-affectation B→G
+  if (currentArrName && currentArrData) {
+    state.columns = JSON.parse(JSON.stringify(currentArrData));
   } else {
     let autoIdx = 1; // commencer à colonne B
     state.columns.forEach(col => {
@@ -393,14 +343,6 @@ function showTemplateEditor() {
     });
   }
   refreshArrList();
-  if (last && arrMap[last]) {
-    arrListBtn.textContent = last;
-    setTimeout(() => {
-      const opt = arrListPanel.querySelector(`[data-id="${last}"]`);
-      if (opt) opt.classList.add('selected');
-    }, 0);
-  }
-
   cellEditor.style.display = 'none';
   state.selectedCell = null;
   templateEditor.style.display = "block";
@@ -657,70 +599,143 @@ function generateAll() {
 }
 
 /* ================================================================
-   AGENCEMENTS (sauvegarde / chargement)
+   AGENCEMENTS — un fichier à la fois, simple et universel
    ================================================================ */
-const ARR_KEY = 'etiquettes_agencements_v1';
-const LAST_KEY = 'etiquettes_dernier_agencement_v1';
-
-function getArrangements() {
-  try { return JSON.parse(localStorage.getItem(ARR_KEY)) || {}; } catch { return {}; }
-}
-function saveArrangements(map) { localStorage.setItem(ARR_KEY, JSON.stringify(map)); }
+let currentArrName = null;   // nom de la config active
+let currentArrData = null;   // [colonnes] de la config active
 
 function refreshArrList() {
-  const map = getArrangements();
-  const names = Object.keys(map);
-  arrListPanel.innerHTML = names.map(n =>
-    `<button class="custom-select-opt" data-id="${escHtml(n)}">${escHtml(n)}</button>`).join('')
-    + `<button class="custom-select-opt" data-id="__new__" style="color:var(--accent);font-weight:600">+ Nouvelle</button>`;
-  if (!names.length) arrListBtn.textContent = 'Configuration';
+  const active = currentArrName ? `<button class="custom-select-opt" data-id="__active__" style="font-weight:600;cursor:default;color:#333">${escHtml(currentArrName)}</button>` : '';
+  arrListPanel.innerHTML = active
+    + `<button class="custom-select-opt" data-id="__load__" style="color:var(--accent)">📁 Charger une config existante</button>`
+    + `<button class="custom-select-opt" data-id="__new__" style="color:var(--accent)">➕ Créer une nouvelle config</button>`;
+  arrListBtn.textContent = currentArrName || 'Configuration';
 }
 
+/* ------ Charger un fichier ------ */
+arrFolderInput.addEventListener("change", () => {
+  const f = arrFolderInput.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const name = f.name.replace(/\.json$/i, '');
+      if (Array.isArray(data)) {
+        currentArrName = name;
+        currentArrData = JSON.parse(JSON.stringify(data));
+        state.columns = JSON.parse(JSON.stringify(data));
+        refreshArrList();
+        renderGrid(); refreshPreview();
+        mapperInfo.textContent = `Configuration « ${name} » chargée.`;
+      } else {
+        mapperInfo.textContent = 'Fichier invalide (format inattendu).';
+      }
+    } catch (e) {
+      mapperInfo.textContent = 'Fichier invalide ou corrompu.';
+    }
+  };
+  reader.readAsText(f);
+  arrFolderInput.value = '';
+});
+
+/* ------ Popup Créer ------ */
 function showNewArrPopup() {
+  if (!arrPopup) return;
+  // S'assurer que le popup est en mode création
+  if (!document.getElementById("arrPopupInput")) restoreArrPopup();
+  const inp = document.getElementById("arrPopupInput");
+  if (!inp) return;
   arrPopup.style.display = 'flex';
-  arrPopupInput.value = '';
-  setTimeout(() => arrPopupInput.focus(), 100);
+  inp.value = '';
+  setTimeout(() => inp.focus(), 100);
 }
-arrPopupInput.addEventListener("keydown", e => { if (e.key === 'Enter') doSaveNewArr(); });
+document.getElementById("arrPopupInput").addEventListener("keydown", e => { if (e.key === 'Enter') doSaveNewArr(); });
 document.getElementById("arrPopupSave").addEventListener("click", doSaveNewArr);
 document.getElementById("arrPopupCancel").addEventListener("click", () => { arrPopup.style.display = 'none'; });
-arrPopup.addEventListener("click", e => { if (e.target === arrPopup) arrPopup.style.display = 'none'; });
+arrPopup.addEventListener("click", e => { if (e.target === arrPopup) { arrPopup.style.display = 'none'; restoreArrPopup(); } });
 
 function doSaveNewArr() {
-  const name = arrPopupInput.value.trim();
+  const inp = document.getElementById("arrPopupInput");
+  const name = (inp ? inp.value : '').trim();
   if (!name) return;
   arrPopup.style.display = 'none';
-  const map = getArrangements();
-  map[name] = JSON.parse(JSON.stringify(state.columns));
-  saveArrangements(map);
-  localStorage.setItem(LAST_KEY, name);
+  currentArrName = name;
+  currentArrData = JSON.parse(JSON.stringify(state.columns));
   refreshArrList();
-  arrListBtn.textContent = name;
-  mapperInfo.textContent = `Configuration « ${name} » sauvegardée.`;
+  downloadArrFile(name, currentArrData);
+  mapperInfo.textContent = `Configuration « ${name} » créée (fichier téléchargé).`;
 }
 
-function loadArrangement(name) {
-  const map = getArrangements();
-  const data = map[name];
-  if (!data) return;
-  state.columns = JSON.parse(JSON.stringify(data));
-  localStorage.setItem(LAST_KEY, name);
-  renderGrid();
-  refreshPreview();
-  arrListBtn.textContent = name;
-  mapperInfo.textContent = `Configuration « ${name} » chargée.`;
+/* Télécharger un fichier de config */
+function downloadArrFile(name, cols) {
+  const safe = name.replace(/[<>:"/\\|?*]/g, '_');
+  const blob = new Blob([JSON.stringify(cols, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = safe + '.json';
+  a.href = url;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* --- Supprimer (web : pas de suppression de fichier possible) --- */
+function confirmDeleteArr() {
+  arrPopup.style.display = 'flex';
+  arrPopup.innerHTML = `
+    <div class="popup-box">
+      <p style="font-weight:600;margin:0 0 8px">Supprimer une configuration</p>
+      <p class="muted" style="font-size:0.9em;margin:0 0 12px">
+        Ouvre ton dossier de sauvegardes avec l'explorateur de fichiers de ton ordinateur,
+        puis supprime le fichier .json correspondant.
+      </p>
+      <div style="display:flex;gap:6px;justify-content:flex-end">
+        <button id="arrDelCancel" class="btn-sm">Compris</button>
+      </div>
+    </div>`;
+  document.getElementById("arrDelCancel").addEventListener("click", () => {
+    arrPopup.style.display = 'none';
+    restoreArrPopup();
+  });
+}
+
+function restoreArrPopup() {
+  arrPopup.innerHTML = `
+    <div class="popup-box">
+      <p style="margin:0 0 8px;font-weight:600">Créer une configuration</p>
+      <p class="muted" style="font-size:0.85em;margin:0 0 6px">Donnez un nom à cette configuration.</p>
+      <input id="arrPopupInput" type="text" placeholder="Nom de la configuration" autocomplete="off" />
+      <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
+        <button id="arrPopupCancel" class="btn-sm">Annuler</button>
+        <button id="arrPopupSave" class="btn-sm" style="background:var(--accent);color:#fff;border-color:var(--accent)">Créer</button>
+      </div>
+    </div>`;
+  // Rebrancher les événements
+  const inp = document.getElementById("arrPopupInput");
+  if (inp) {
+    inp.addEventListener("keydown", e => { if (e.key === 'Enter') doSaveNewArr(); });
+  }
+  const save = document.getElementById("arrPopupSave");
+  if (save) save.addEventListener("click", doSaveNewArr);
+  const cancel = document.getElementById("arrPopupCancel");
+  if (cancel) cancel.addEventListener("click", () => { arrPopup.style.display = 'none'; });
+}
+
+// Réservé à la future version Electron : vraie suppression du fichier + déchargement.
+// (En web, la suppression se fait à la main, voir confirmDeleteArr.)
+function doDeleteArr() {
+  if (!currentArrName) return;
+  const oldName = currentArrName;
+  currentArrName = null;
+  currentArrData = null;
+  state.columns = JSON.parse(JSON.stringify(MODEL.columns));
+  refreshArrList();
+  renderGrid(); refreshPreview();
+  mapperInfo.textContent = `Configuration « ${oldName} » retirée (le fichier .json reste sur votre disque).`;
 }
 
 function deleteArrangement() {
-  const name = arrListBtn.textContent;
-  if (name === 'Configuration' || !getArrangements()[name]) return;
-  const map = getArrangements();
-  delete map[name];
-  saveArrangements(map);
-  if (localStorage.getItem(LAST_KEY) === name) localStorage.removeItem(LAST_KEY);
-  arrListBtn.textContent = 'Configuration';
-  refreshArrList();
-  mapperInfo.textContent = `Configuration « ${name} » supprimée.`;
+  confirmDeleteArr();
 }
 
 /* ================================================================
@@ -788,6 +803,9 @@ function chunk(items, size) { const out = []; for (let i = 0; i < items.length; 
     applyModelCSS();
   }
 })();
+
+// Init : tout est vide au démarrage, l'utilisateur charge ses fichiers
+
 refreshArrList();
 toggleArrBar();
 clearBuildInfo();

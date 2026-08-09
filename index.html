@@ -28,7 +28,7 @@
     <header>
       <img src="logo-LMDC-square1-1.png" alt="Logo LMDC" class="header-logo" />
       <p class="eyebrow">Production Horticole</p>
-      <h1><span class="logo-1">Tituplantus</span> <span class="title-sub">(avec Tituplantus label ton hortus)</span></h1>
+      <h1><span class="logo-1">Tituplantus</span> <span class="title-sub">(avec Tituplantus libelle ton hortus)</span></h1>
     </header>
 
     <main>
@@ -56,16 +56,14 @@
 
         <!-- Agencements -->
         <div class="tpl-row arr-bar">
-          <div class="custom-select" id="arrListWrap" style="max-width:160px">
+          <div class="custom-select" style="max-width:160px">
             <button id="arrListBtn" class="custom-select-btn">Configuration</button>
             <div id="arrListPanel" class="custom-select-panel" style="display:none"></div>
           </div>
           <button type="button" id="saveArrBtn" class="btn-sm">💾 Sauvegarder</button>
           <button type="button" id="delArrBtn" class="btn-sm danger">Supprimer</button>
-          <button type="button" id="exportArrBtn" class="btn-sm arr-right">📤 Exporter</button>
-          <button type="button" id="importArrBtn" class="btn-sm">📥 Importer</button>
-          <input type="file" id="importArrFile" accept=".json" style="display:none" />
         </div>
+        <input type="file" id="arrFolderInput" accept=".json" multiple style="display:none" />
 
         <p class="muted">Tire les poignées ⋮ pour redimensionner. Clique sur une cellule pour la configurer.</p>
 
@@ -130,14 +128,15 @@
         </div>
       </section>
     </main>
-    <!-- Popup nouvel agencement -->
+    <!-- Popup Créer -->
     <div id="arrPopup" class="popup-overlay" style="display:none">
       <div class="popup-box">
-        <p style="margin:0 0 8px;font-weight:600">Nouvel agencement</p>
-        <input id="arrPopupInput" type="text" placeholder="Nom de l'agencement" autocomplete="off" />
+        <p style="margin:0 0 8px;font-weight:600">Créer une configuration</p>
+        <p class="muted" style="font-size:0.85em;margin:0 0 6px">Donnez un nom à cette configuration.</p>
+        <input id="arrPopupInput" type="text" placeholder="Nom de la configuration" autocomplete="off" />
         <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
           <button id="arrPopupCancel" class="btn-sm">Annuler</button>
-          <button id="arrPopupSave" class="btn-sm" style="background:var(--accent);color:#fff;border-color:var(--accent)">OK</button>
+          <button id="arrPopupSave" class="btn-sm" style="background:var(--accent);color:#fff;border-color:var(--accent)">Créer</button>
         </div>
       </div>
     </div>

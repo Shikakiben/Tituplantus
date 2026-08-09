@@ -9,12 +9,12 @@ Application **locale** — fonctionne **hors-ligne**, sans serveur, sur **Linux 
 ## 🚀 Lancement
 
 ### Linux
-Double-cliquer sur **`Lancer-Etiquettes.sh`** (ouvre `index.html` directement dans Chrome/Chromium en mode app, sinon dans le navigateur par défaut — **aucun serveur nécessaire**).
+Double-cliquer sur **`Lancer-Tituplantus.sh`** (ouvre `index.html` directement dans Chrome/Chromium en mode app, sinon dans le navigateur par défaut — **aucun serveur nécessaire**).
 
-Option bureau : modifier `etiquettes.desktop` avec le bon chemin puis le copier dans `~/.local/share/applications/`.
+Option bureau : modifier `Tituplantus.desktop` avec le bon chemin puis le copier dans `~/.local/share/applications/`.
 
 ### Windows
-Double-cliquer sur **`Lancer-Etiquettes.bat`**.
+Double-cliquer sur **`Lancer-Tituplantus.bat`**.
 
 ---
 
@@ -86,9 +86,7 @@ Structure :
 - `formats/models.js` — catalogue des modèles d'étiquettes
 - `assets/` — `xlsx.full.min.js` (lecture de fichiers), `fonts/` (polices locales)
 
-```bash
-npm start          # Serveur local (port 3210) — optionnel, l'app marche en file://
-```
+Aucun serveur nécessaire : ouvrir `index.html` directement (ou passer par `Lancer-Tituplantus.sh` / `Lancer-Tituplantus.bat`).
 
 ---
 
