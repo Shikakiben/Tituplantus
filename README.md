@@ -8,7 +8,9 @@ Application **locale** — fonctionne **hors-ligne**, sans serveur, sur **Linux 
 
 ## 🌐 Version web (PWA) — smartphones + PC
 
-L'app est aussi disponible **en ligne** : **https://shikakiben.github.io/Tituplantus/**
+L'app est aussi disponible **en ligne** : **https://tituplantus.lesmuretsducausse.com/**
+
+> L'ancienne adresse `https://shikakiben.github.io/Tituplantus/` redirige automatiquement vers le sous-domaine.
 
 - **Installable** : sur téléphone, « Ajouter à l'écran d'accueil » (Android) / « Sur l'écran d'accueil » (iOS) ; sur PC, icône « Installer » dans le navigateur → s'ouvre comme une vraie app.
 - **Hors-ligne** : après une première ouverture en ligne, l'app fonctionne **sans connexion** (service worker `sw.js` qui met tout en cache).
@@ -43,8 +45,8 @@ Si on **ajoute un nouveau fichier** à l'app (ex. une nouvelle police, une image
 
 ### Vérifier que la version en ligne est à jour
 
-- Ouvrir `https://shikakiben.github.io/Tituplantus/` (ou recharger avec Ctrl+F5)
-- L'IA peut vérifier avec : `curl -s -o /dev/null -w "%{http_code}" https://shikakiben.github.io/Tituplantus/` → doit répondre `200`
+- Ouvrir `https://tituplantus.lesmuretsducausse.com/` (ou recharger avec Ctrl+F5)
+- L'IA peut vérifier avec : `curl -s -o /dev/null -w "%{http_code}" https://tituplantus.lesmuretsducausse.com/` → doit répondre `200`
 
 ---
 
