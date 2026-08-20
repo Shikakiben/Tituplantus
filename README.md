@@ -6,6 +6,19 @@ Application **locale** — fonctionne **hors-ligne**, sans serveur, sur **Linux 
 
 ---
 
+## 🌐 Version web (PWA) — smartphones + PC
+
+L'app est aussi disponible **en ligne** : **https://shikakiben.github.io/Tituplantus/**
+
+- **Installable** : sur téléphone, « Ajouter à l'écran d'accueil » (Android) / « Sur l'écran d'accueil » (iOS) ; sur PC, icône « Installer » dans le navigateur → s'ouvre comme une vraie app.
+- **Hors-ligne** : après une première ouverture en ligne, l'app fonctionne **sans connexion** (service worker `sw.js` qui met tout en cache).
+- **Mise à jour** : à chaque ouverture en ligne, le service worker récupère la nouvelle version en arrière-plan.
+- **Impression** : depuis un téléphone, via la boîte de dialogue d'impression du navigateur (Wi-Fi / AirPrint).
+
+> ⚠️ Le service worker ne fonctionne **que sur HTTPS** (ou localhost). La version locale `file://` ne l'utilise pas — elle reste 100 % locale et indépendante.
+
+---
+
 ## 🚀 Lancement
 
 ### Linux
@@ -102,6 +115,8 @@ Aucun serveur nécessaire : ouvrir `index.html` directement (ou passer par `Lanc
 Le même code pourra être embarqué dans des enveloppes natives :
 - **Desktop** : Electron → AppImage (Linux) et .exe (Windows)
 - **Android** : Capacitor → .apk (avec impression via `@capacitor-community/printer`)
+
+> ✅ **Fait (2026-08-20)** : version web PWA en ligne sur GitHub Pages (`sw.js` + manifest complet).
 
 ---
 
