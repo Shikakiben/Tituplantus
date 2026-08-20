@@ -21,36 +21,16 @@ L'app est aussi disponible **en ligne** : **https://tituplantus.lesmuretsducauss
 
 ---
 
-## � Maintenance / Mise à jour (à lire par l'IA)
+## 🔧 Maintenance / Mise à jour
 
-> **Pour l'utilisateur** : tu n'as rien à faire toi-même — demande à l'IA de faire les changements. Cette section est là pour que l'IA retrouve les règles.
+> **Pour l'utilisateur** : tu n'as rien à faire toi-même — demande à l'IA de faire les changements.
+> **Pour l'IA** : toutes les règles techniques (service worker, cache, workflow git, structure) sont dans **`NOTE-TITUPLANTUS.md`** (dans ce dossier).
 
-### Comment fonctionne la mise à jour de la version web
-
-1. Les fichiers sont modifiés **localement** (dossier `Tituplantus/` du workspace)
-2. L'IA fait `git commit` + `git push` vers GitHub (`Shikakiben/Tituplantus`)
-3. **GitHub Pages se reconstruit automatiquement** (~1-2 min) → la version web est à jour
-4. Les utilisateurs qui ont déjà ouvert l'app reçoivent la nouvelle version **en arrière-plan** à leur prochaine ouverture en ligne
-
-### ⚠️ Règle importante : ajout d'un NOUVEAU fichier
-
-Si on **ajoute un nouveau fichier** à l'app (ex. une nouvelle police, une image, un modèle) :
-
-1. L'ajouter à la liste `ASSETS` dans **`sw.js`**
-2. **Changer le numéro de version du cache** en haut de `sw.js` :
-   - `tituplantus-v1` → `tituplantus-v2` → `v3`… (à chaque ajout de fichier)
-3. Sinon, le nouveau fichier ne sera pas disponible hors-ligne pour les anciens visiteurs
-
-> Si on ne fait que **modifier** des fichiers existants, rien à faire de spécial : la mise à jour se fait toute seule.
-
-### Vérifier que la version en ligne est à jour
-
-- Ouvrir `https://tituplantus.lesmuretsducausse.com/` (ou recharger avec Ctrl+F5)
-- L'IA peut vérifier avec : `curl -s -o /dev/null -w "%{http_code}" https://tituplantus.lesmuretsducausse.com/` → doit répondre `200`
+**En bref** : l'IA modifie les fichiers → `git push` → GitHub Pages se reconstruit automatiquement (~1-2 min) → la version web est à jour. Si on **ajoute un nouveau fichier**, il faut le déclarer dans `sw.js` et changer le numéro de version du cache (voir la note).
 
 ---
 
-## �🚀 Lancement
+## 🚀 Lancement
 
 ### Linux
 Double-cliquer sur **`Lancer-Tituplantus.sh`** (ouvre `index.html` directement dans Chrome/Chromium en mode app, sinon dans le navigateur par défaut — **aucun serveur nécessaire**).
