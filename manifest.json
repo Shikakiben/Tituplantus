@@ -1,7 +1,9 @@
 {
   "name": "Tituplantus",
   "short_name": "Tituplantus",
-  "start_url": ".",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f4f7ef",
