@@ -12,7 +12,7 @@
       La version locale (file://) n'utilise PAS ce fichier.
    ================================================================ */
 
-const CACHE = 'tituplantus-v1';
+const CACHE = 'tituplantus-v2';
 
 /* Tous les fichiers de l'app — à mettre à jour si on en ajoute */
 const ASSETS = [
