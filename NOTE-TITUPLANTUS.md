@@ -56,7 +56,42 @@ Si on **ajoute un nouveau fichier** à l'app (police, image, modèle…) :
 - `Lancer-Tituplantus.sh` / `.bat` — lanceurs locaux (file://)
 - `Tituplantus.desktop` — raccourci bureau Linux
 
-## 🔮 Évolutions prévues
+## � Modèle 11×115 mm (détails techniques)
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Étiquette | 115 × 11 mm (105 mm de corps + pointe V de 20 mm) |
+| Grille | 2 colonnes × 22 lignes = 44 étiquettes/planche |
+| Format papier | **A4 portrait** (210 × 297 mm) |
+| Disposition | « en ciseaux » — colonne droite inversée (180°) et décalée de +5,5 mm |
+| Haut colonne gauche | 30,25 mm |
+| Haut colonne droite | 24,75 mm |
+
+## 🔧 Ajouter un modèle d'étiquette
+
+Éditer `formats/models.js` et ajouter une entrée dans `MODELS` :
+
+```js
+{
+  id: "monformat",  name: "Mon format 80×40 mm",
+  lw:80, lh:40,   bw:60,   tw:20, tx:60,   gbw:60,
+  pw:210, ph:297,
+  cols:2,  rowsPerCol:10,
+  columns: [
+    // 1 entrée par colonne de texte :
+    //   vertical:true → colonne lue verticalement (colonne « prix »), sinon horizontale
+    { width:15, vertical:true, lines:[ /* lignes de texte */ ] }
+  ],
+  // 1 entrée par colonne de planche :
+  //   top    = marge haute (mm)
+  //   rotate = 180 → colonne inversée (disposition « en ciseaux »), 0 → normale
+  margins:[ { top:10, rotate:0 }, { top:12, rotate:180 } ]
+}
+```
+
+Le nouveau modèle apparaît automatiquement dans le sélecteur.
+
+## �🔮 Évolutions prévues
 
 - **Desktop** : Electron → AppImage (Linux) + .exe (Windows)
 - **Android** : Capacitor → .apk (impression via `@capacitor-community/printer`)
