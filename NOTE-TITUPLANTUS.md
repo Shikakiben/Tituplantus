@@ -40,7 +40,7 @@ Si on **ajoute un nouveau fichier** à l'app (police, image, modèle…) :
 - **Manifest** : `start_url`, `scope`, `id` = `./` (déjà configuré).
 - **Impression** : `window.print()` — fonctionne sur mobile via la boîte de dialogue du navigateur (Wi-Fi / AirPrint).
 - **Export configs** : Blob + `URL.createObjectURL` + `a.download` — compatible HTTPS.
-- **Stockage** : `localStorage` (compatible file:// et HTTPS).
+- **Stockage** : les **configurations sont des fichiers `.json` téléchargés** dans un dossier choisi par l'utilisateur (volontairement PAS en localStorage, pour survivre au nettoyage du navigateur). Seul le **dernier modèle sélectionné** (son id) est mémorisé en `localStorage` — perte sans gravité si effacé.
 - **Aucune dépendance externe** : tout est local (`assets/xlsx.full.min.js`, polices dans `assets/fonts/`).
 
 ## 🗂️ Structure des fichiers
