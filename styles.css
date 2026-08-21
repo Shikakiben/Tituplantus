@@ -78,6 +78,9 @@ h1 {
   font-family: "DM Serif Display", serif;
   font-size: clamp(1.8rem, 2.8vw, 2.2rem);
   font-weight: 400;
+  /* Réserve la zone du logo (110 px) + espace : le texte passe à la ligne
+     dès qu'il touche l'image au lieu de passer dessous (écrans étroits) */
+  padding-right: 125px;
 }
 
 .logo-1 {
