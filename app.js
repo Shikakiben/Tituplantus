@@ -378,6 +378,8 @@ function renderGrid() {
       const h = document.createElement('div');
       h.className = 'grid-handle';
       h.addEventListener('mousedown', e => onHandleDown(e, ci));
+      h.addEventListener('touchstart', e => onHandleDown(e, ci), { passive: false });
+      h.addEventListener('pointerdown', e => onHandleDown(e, ci));
       body.appendChild(h);
     }
 
@@ -410,17 +412,18 @@ function renderGrid() {
   labelGrid.appendChild(body);
 }
 
-/* ---- Drag handles ---- */
+/* ---- Drag handles (souris + tactile) ---- */
 let dragInfo = null;
 function onHandleDown(e, colIdx) {
-  dragInfo = { colIdx, startX: e.clientX, widths: state.columns.map(c => c.width) };
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
+  dragInfo = { colIdx, startX: x, widths: state.columns.map(c => c.width) };
   document.querySelectorAll('.grid-handle').forEach(h => h.classList.add('active'));
   document.body.style.cursor = 'col-resize';
   e.preventDefault();
 }
-document.addEventListener('mousemove', e => {
+function dragMove(clientX) {
   if (!dragInfo) return;
-  const dx = e.clientX - dragInfo.startX;
+  const dx = clientX - dragInfo.startX;
   const dmm = dx / SCALE;
   const ws = [...dragInfo.widths];
   const ci = dragInfo.colIdx;
@@ -433,14 +436,26 @@ document.addEventListener('mousemove', e => {
   ws[ci] = Math.max(MIN, w1);
   state.columns.forEach((c, i) => { c.width = ws[i]; });
   renderGrid();
-});
-document.addEventListener('mouseup', () => {
+}
+function dragEnd() {
   if (!dragInfo) return;
   dragInfo = null;
   document.querySelectorAll('.grid-handle').forEach(h => h.classList.remove('active'));
   document.body.style.cursor = '';
   refreshPreview();
-});
+}
+document.addEventListener('mousemove', e => dragMove(e.clientX));
+document.addEventListener('mouseup', dragEnd);
+document.addEventListener('touchmove', e => {
+  if (!dragInfo) return;
+  dragMove(e.touches[0].clientX);
+  e.preventDefault();
+}, { passive: false });
+document.addEventListener('touchend', dragEnd);
+document.addEventListener('touchcancel', dragEnd);
+document.addEventListener('pointermove', e => dragMove(e.clientX));
+document.addEventListener('pointerup', dragEnd);
+document.addEventListener('pointercancel', dragEnd);
 
 /* ---- Édition cellule ---- */
 function selectCell(ci, li) {

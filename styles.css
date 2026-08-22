@@ -322,6 +322,14 @@ input[type="number"] {
   flex-shrink: 0;
   position: relative;
   z-index: 5;
+  touch-action: none; /* le doigt fait glisser la poignée au lieu de faire défiler la page */
+}
+/* Cible tactile plus large sur tout écran tactile (smartphone, tablette, PC tactile) */
+@media (any-pointer: coarse) {
+  .grid-handle {
+    width: 16px;
+    margin: 0 -5px; /* compense visuellement : reste ~6px d'écart entre colonnes */
+  }
 }
 .grid-handle:hover,
 .grid-handle.active {
