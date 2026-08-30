@@ -257,6 +257,8 @@ input[type="number"] {
   border: 1px solid #999;
   border-right: none;
   border-radius: 2px 0 0 2px;
+  padding: var(--hole-top, 0) 0 var(--hole-bottom, 0); /* réserve les zones des fentes */
+  box-sizing: border-box;
 }
 .label-grid-v {
   position: absolute; top: 0; bottom: 0;
@@ -264,6 +266,16 @@ input[type="number"] {
   z-index: 2;
 }
 .label-grid-v svg {
+  width: 100%; height: 100%; display: block;
+}
+/* Fentes pour piquet : repères par-dessus la grille, sans gêner le clic */
+.label-grid-holes {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  width: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+.label-grid-holes svg {
   width: 100%; height: 100%; display: block;
 }
 
@@ -345,6 +357,37 @@ input[type="number"] {
   line-height: 1;
 }
 
+/* Poignées de lignes (redimensionnement haut/bas) */
+.grid-row-handle {
+  position: absolute;
+  left: 0; right: 0;
+  height: 6px;
+  margin-top: -3px; /* centré sur la frontière */
+  cursor: row-resize;
+  background: transparent;
+  z-index: 5;
+  touch-action: none;
+}
+@media (any-pointer: coarse) {
+  .grid-row-handle {
+    height: 16px;
+    margin-top: -8px;
+  }
+}
+.grid-row-handle:hover,
+.grid-row-handle.active {
+  background: rgba(0,0,0,0.15);
+}
+.grid-row-handle::after {
+  content: '⋯';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 14px; color: #888;
+  pointer-events: none;
+  line-height: 1;
+}
+
 /* Panneau édition cellule */
 .cell-editor {
   margin-top: 10px;
@@ -394,14 +437,20 @@ input[type="number"] {
   text-align: left;
 }
 #singlePreview .label-body {
-  width: var(--tx);
+  width: var(--gbw);
   border: 1px solid var(--accent);
   border-right: none;
   border-radius: 2px 0 0 2px;
   box-sizing: border-box;
+  padding: var(--hole-top, 0) 2mm var(--hole-bottom, 0); /* réserve les zones des fentes */
 }
 #singlePreview .label-pt {
   left: var(--tx);
+}
+/* Rectangle (pas de pointe en V) : le corps occupe toute la largeur, bordure complète */
+#singlePreview .label.rect .label-body {
+  border-right: 1px solid var(--accent);
+  border-radius: 2px;
 }
 
 .btn-sm {
@@ -490,10 +539,24 @@ input[type="number"] {
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 0 2mm;
+  padding: var(--hole-top, 0) 2mm var(--hole-bottom, 0); /* réserve les zones des fentes */
+  box-sizing: border-box;
   flex-shrink: 0;
   position: relative;
   z-index: 1;
+}
+
+/* Fentes (trous) pré-percées pour piquet — repères gris par-dessus */
+.label-holes {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.label-holes svg {
+  width: 100%; height: 100%;
+  display: block;
 }
 
 /* Trait horizontal entre étiquettes : s'arrête au début de la pointe */
@@ -517,6 +580,19 @@ input[type="number"] {
   width: var(--tx);
   height: 0;
   border-top: 0.15mm solid #999;
+}
+
+/* Modèle rectangulaire (sans pointe en V) : le trait de séparation fait toute la largeur */
+.sheet-column .label.rect .label-body::after {
+  width: 100%;
+}
+/* Pas de trait sur le bord bas de la planche (la limite est déjà visible) */
+.sheet-column .label.rect:last-child .label-body::after {
+  border-bottom: none;
+}
+/* Trait vertical entre les deux colonnes d'étiquettes */
+.sheet-column.left .label.rect .label-body {
+  border-right: 0.15mm solid #999;
 }
 
 /* Pointe en V : SVG inline */

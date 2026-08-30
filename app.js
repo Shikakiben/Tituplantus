@@ -5,8 +5,22 @@
 const SCALE = 3;
 
 function tipSVG() {
-  if (!MODEL.lw) return '';
+  if (!MODEL.lw || !MODEL.tw) return '';
   return `<svg viewBox="0 0 ${MODEL.tw} ${MODEL.lh}" preserveAspectRatio="none" shape-rendering="crispEdges"><line x1="0" y1="0" x2="${MODEL.tw}" y2="${MODEL.lh/2}" stroke="#999" stroke-width="0.2"/><line x1="0" y1="${MODEL.lh}" x2="${MODEL.tw}" y2="${MODEL.lh/2}" stroke="#999" stroke-width="0.2"/></svg>`;
+}
+
+/* Fentes (trous) pré-percées en haut/bas pour passer sur un piquet.
+   Rectangulaires (coins droits), holeTop/holeBottom = distance du bord au CENTRE (mm). */
+function holesSVG() {
+  if (!MODEL.lw || !MODEL.slotW) return '';
+  const cx = MODEL.lw / 2;
+  const x = cx - MODEL.slotW / 2;
+  const topY = MODEL.holeTop - MODEL.slotH / 2;
+  const botY = MODEL.lh - MODEL.holeBottom - MODEL.slotH / 2;
+  return `<svg viewBox="0 0 ${MODEL.lw} ${MODEL.lh}" preserveAspectRatio="none" shape-rendering="crispEdges">
+    <rect x="${x}" y="${topY}" width="${MODEL.slotW}" height="${MODEL.slotH}" fill="none" stroke="#999" stroke-width="0.2"/>
+    <rect x="${x}" y="${botY}" width="${MODEL.slotW}" height="${MODEL.slotH}" fill="none" stroke="#999" stroke-width="0.2"/>
+  </svg>`;
 }
 
 function applyModelCSS() {
@@ -20,6 +34,9 @@ function applyModelCSS() {
   r.setProperty('--gbw', MODEL.gbw + 'mm');
   r.setProperty('--pw', MODEL.pw + 'mm');
   r.setProperty('--ph', MODEL.ph + 'mm');
+  // Zone à ne pas imprimer en haut/bas : du bord jusqu'au bord intérieur de la fente (+ marge)
+  r.setProperty('--hole-top', ((MODEL.holeTop + MODEL.slotH / 2 + 1) || 0) + 'mm');
+  r.setProperty('--hole-bottom', ((MODEL.holeBottom + MODEL.slotH / 2 + 1) || 0) + 'mm');
   const old = document.getElementById('dyn-page');
   if (old) old.remove();
   const s = document.createElement('style');
@@ -54,6 +71,7 @@ function switchModel(id) {
 
   applyModelCSS();
   state.columns = JSON.parse(JSON.stringify(MODEL.columns));
+  state.heights = MODEL.heights ? [...MODEL.heights] : [];
   toggleArrBar();
   renderGrid();
   refreshPreview();
@@ -86,6 +104,7 @@ const state = {
   qtyColIdx: 0,
   defaultQty: 1,
   columns: JSON.parse(JSON.stringify(MODEL.columns)),
+  heights: MODEL.heights ? [...MODEL.heights] : [],
   selectedCell: null, // { col: 0, line: 0 }
   records: [],
   labels: [],
@@ -372,6 +391,22 @@ function renderGrid() {
   const body = document.createElement('div');
   body.className = 'label-grid-body';
 
+  // Poignées de lignes (horizontales, entre les lignes) — positionnées en absolu
+  const heights = state.heights || [];
+  if (heights.length > 1) {
+    let acc = 0;
+    for (let ri = 0; ri < heights.length - 1; ri++) {
+      acc += heights[ri];
+      const rh = document.createElement('div');
+      rh.className = 'grid-row-handle';
+      rh.style.top = ((MODEL.holeTop || 0) + acc) + 'mm';
+      rh.addEventListener('mousedown', e => onRowHandleDown(e, ri + 1));
+      rh.addEventListener('touchstart', e => onRowHandleDown(e, ri + 1), { passive: false });
+      rh.addEventListener('pointerdown', e => onRowHandleDown(e, ri + 1));
+      body.appendChild(rh);
+    }
+  }
+
   state.columns.forEach((col, ci) => {
     // Poignée avant (sauf 1ʳᵉ colonne)
     if (ci > 0) {
@@ -393,6 +428,10 @@ function renderGrid() {
     col.lines.forEach((line, li) => {
       const cell = document.createElement('div');
       cell.className = 'grid-cell';
+      if (heights[li]) {
+        cell.style.height = heights[li] + 'mm';
+        cell.style.flex = '0 0 auto';
+      }
       if (line.colIdx !== null && line.colIdx < 26) {
         cell.textContent = colLetter(line.colIdx);
         cell.style.color = '#333';
@@ -410,50 +449,80 @@ function renderGrid() {
   });
 
   labelGrid.appendChild(body);
+
+  // Fentes (trous) pour piquet : repères par-dessus la grille, sans gêner le clic
+  if (holesSVG()) {
+    const hz = document.createElement('div');
+    hz.className = 'label-grid-holes';
+    hz.innerHTML = holesSVG();
+    labelGrid.appendChild(hz);
+  }
 }
 
 /* ---- Drag handles (souris + tactile) ---- */
 let dragInfo = null;
 function onHandleDown(e, colIdx) {
   const x = e.touches ? e.touches[0].clientX : e.clientX;
-  dragInfo = { colIdx, startX: x, widths: state.columns.map(c => c.width) };
+  dragInfo = { mode: 'col', colIdx, startX: x, widths: state.columns.map(c => c.width) };
   document.querySelectorAll('.grid-handle').forEach(h => h.classList.add('active'));
   document.body.style.cursor = 'col-resize';
   e.preventDefault();
 }
-function dragMove(clientX) {
+function onRowHandleDown(e, rowIdx) {
+  const y = e.touches ? e.touches[0].clientY : e.clientY;
+  dragInfo = { mode: 'row', rowIdx, startY: y, heights: [...(state.heights || [])] };
+  document.querySelectorAll('.grid-row-handle').forEach(h => h.classList.add('active'));
+  document.body.style.cursor = 'row-resize';
+  e.preventDefault();
+}
+function dragMove(clientX, clientY) {
   if (!dragInfo) return;
-  const dx = clientX - dragInfo.startX;
-  const dmm = dx / SCALE;
-  const ws = [...dragInfo.widths];
-  const ci = dragInfo.colIdx;
-  const MIN = 5;
-  let w0 = ws[ci - 1] + dmm;
-  let w1 = ws[ci] - dmm;
-  if (w0 < MIN) { w1 -= (MIN - w0); w0 = MIN; }
-  if (w1 < MIN) { w0 -= (MIN - w1); w1 = MIN; }
-  ws[ci - 1] = Math.max(MIN, w0);
-  ws[ci] = Math.max(MIN, w1);
-  state.columns.forEach((c, i) => { c.width = ws[i]; });
+  if (dragInfo.mode === 'col') {
+    const dx = clientX - dragInfo.startX;
+    const dmm = dx / SCALE;
+    const ws = [...dragInfo.widths];
+    const ci = dragInfo.colIdx;
+    const MIN = 5;
+    let w0 = ws[ci - 1] + dmm;
+    let w1 = ws[ci] - dmm;
+    if (w0 < MIN) { w1 -= (MIN - w0); w0 = MIN; }
+    if (w1 < MIN) { w0 -= (MIN - w1); w1 = MIN; }
+    ws[ci - 1] = Math.max(MIN, w0);
+    ws[ci] = Math.max(MIN, w1);
+    state.columns.forEach((c, i) => { c.width = ws[i]; });
+  } else {
+    const dy = clientY - dragInfo.startY;
+    const dmm = dy / SCALE;
+    const hs = [...dragInfo.heights];
+    const ri = dragInfo.rowIdx;
+    const MIN = 3;
+    let h0 = hs[ri - 1] + dmm;
+    let h1 = hs[ri] - dmm;
+    if (h0 < MIN) { h1 -= (MIN - h0); h0 = MIN; }
+    if (h1 < MIN) { h0 -= (MIN - h1); h1 = MIN; }
+    hs[ri - 1] = Math.max(MIN, h0);
+    hs[ri] = Math.max(MIN, h1);
+    state.heights = hs;
+  }
   renderGrid();
 }
 function dragEnd() {
   if (!dragInfo) return;
   dragInfo = null;
-  document.querySelectorAll('.grid-handle').forEach(h => h.classList.remove('active'));
+  document.querySelectorAll('.grid-handle, .grid-row-handle').forEach(h => h.classList.remove('active'));
   document.body.style.cursor = '';
   refreshPreview();
 }
-document.addEventListener('mousemove', e => dragMove(e.clientX));
+document.addEventListener('mousemove', e => dragMove(e.clientX, e.clientY));
 document.addEventListener('mouseup', dragEnd);
 document.addEventListener('touchmove', e => {
   if (!dragInfo) return;
-  dragMove(e.touches[0].clientX);
+  dragMove(e.touches[0].clientX, e.touches[0].clientY);
   e.preventDefault();
 }, { passive: false });
 document.addEventListener('touchend', dragEnd);
 document.addEventListener('touchcancel', dragEnd);
-document.addEventListener('pointermove', e => dragMove(e.clientX));
+document.addEventListener('pointermove', e => dragMove(e.clientX, e.clientY));
 document.addEventListener('pointerup', dragEnd);
 document.addEventListener('pointercancel', dragEnd);
 
@@ -526,6 +595,7 @@ function refreshPreview() {
 function buildFullLabel(row) {
   const label = document.createElement("div");
   label.className = "label";
+  if (!MODEL.tw) label.classList.add("rect");
 
   const body = document.createElement("div");
   body.className = "label-body";
@@ -538,9 +608,16 @@ function buildFullLabel(row) {
     colEl.style.flexDirection = 'column';
     colEl.style.flexShrink = '0';
 
-    col.lines.forEach(line => {
+    col.lines.forEach((line, li) => {
       const cell = document.createElement("div");
-      cell.style.flex = '1';
+      const h = (state.heights || [])[li];
+      if (h) {
+        cell.style.height = h + 'mm';
+        cell.style.flex = '0 0 auto';
+      } else {
+        cell.style.flex = '1';
+      }
+      cell.style.flexShrink = '0';
       cell.style.display = 'flex';
       cell.style.alignItems = line.alignV;
       cell.style.justifyContent = line.alignH;
@@ -572,7 +649,16 @@ function buildFullLabel(row) {
   pt.innerHTML = tipSVG();
 
   label.appendChild(body);
-  label.appendChild(pt);
+  // Pointe en V : uniquement si le modèle en a une
+  if (MODEL.tw) label.appendChild(pt);
+
+  // Fentes pour piquet (repères par-dessus la zone non imprimable)
+  if (holesSVG()) {
+    const hz = document.createElement("div");
+    hz.className = "label-holes";
+    hz.innerHTML = holesSVG();
+    label.appendChild(hz);
+  }
   return label;
 }
 
@@ -788,11 +874,23 @@ function renderSheets() {
 function buildEmptyLabel() {
   const label = document.createElement("div");
   label.className = "label";
+  if (!MODEL.tw) label.classList.add("rect");
   const body = document.createElement("div");
   body.className = "label-body";
   body.innerHTML = '<div style="flex:1">&nbsp;</div>';
   label.appendChild(body);
-  label.innerHTML += `<div class="label-pt">${tipSVG()}</div>`;
+  if (MODEL.tw) {
+    const pt = document.createElement("div");
+    pt.className = "label-pt";
+    pt.innerHTML = tipSVG();
+    label.appendChild(pt);
+  }
+  if (holesSVG()) {
+    const hz = document.createElement("div");
+    hz.className = "label-holes";
+    hz.innerHTML = holesSVG();
+    label.appendChild(hz);
+  }
   return label;
 }
 

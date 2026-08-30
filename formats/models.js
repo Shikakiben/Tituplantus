@@ -32,6 +32,31 @@ const MODELS = [
       ]}
     ],
     margins:[ { top:30.25, rotate:0 }, { top:24.75, rotate:180 } ]
+  },
+  {
+    id: "104x74-piquer",
+    name: "Étiquette 105×74 à piquer (8/A4)",
+    // Vrai A4 divisé en 8 : 210/2 × 297/4 = 105 × 74,25 mm (2 colonnes × 4 rangées).
+    // Fentes (trous) pré-percées en haut et en bas pour passer sur un piquet :
+    //   holeTop / holeBottom = distance du BORD au CENTRE de la fente (mm)
+    //   slotW / slotH = dimensions de la fente (mm) — fins, centrés horizontalement
+    lw:105, lh:74.25,   bw:105,   tw:0, tx:0,   gbw:105,
+    pw:210, ph:297,
+    cols:2,  rowsPerCol:4,
+    holeTop:6, holeBottom:6, slotW:10, slotH:3.5,
+    // Hauteurs des 4 lignes (mm) — ajustables à la souris/au doigt (poignées horizontales)
+    // Somme = zone sûre entre les fentes : 74,25 − 8,75 − 8,75 = 56,75 mm
+    heights:[14.1875, 14.1875, 14.1875, 14.1875],
+    columns: Array.from({length: 2}, () => ({
+      width: 52.5, // 2 × 52,5 = 105 mm
+      lines: [
+        { colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' },
+        { colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' },
+        { colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' },
+        { colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' }
+      ]
+    })),
+    margins:[ { top:0, rotate:0 }, { top:0, rotate:0 } ]
   }
 
   // Ajouter d'autres modèles ici, ex.:
