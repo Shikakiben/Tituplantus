@@ -107,8 +107,20 @@
               <option value="flex-end">Bas</option>
             </select>
           </div>
+          <div class="cell-editor-row">
+            <button type="button" id="ceMerge" class="btn-sm" style="display:none">⬅ Fusionner avec la droite</button>
+            <button type="button" id="ceSplit" class="btn-sm" style="display:none">➗ Diviser en deux</button>
+          </div>
           <button type="button" id="ceDelete" class="btn-sm" style="color:#c00;border-color:#c00">Supprimer la cellule</button>
           <button type="button" id="ceClose" class="btn-sm">Fermer</button>
+
+          <!-- Choix d'ajustement lors de la suppression (mode « lignes ») -->
+          <div id="ceDeleteChoice" class="cell-editor-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed #ccc">
+            <span style="font-size:0.85em;font-weight:600">Comment ajuster la grille ?</span>
+            <button type="button" id="ceDelH" class="btn-sm">↔ Horizontal — la ligne se recompose</button>
+            <button type="button" id="ceDelV" class="btn-sm">↕ Vertical — la ligne disparaît</button>
+            <button type="button" id="ceDelCancel" class="btn-sm">Annuler</button>
+          </div>
         </div>
 
         <p id="mapperInfo" class="muted"></p>

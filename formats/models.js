@@ -44,16 +44,15 @@ const MODELS = [
     pw:210, ph:297,
     cols:2,  rowsPerCol:4,
     holeTop:6, holeBottom:6, slotW:10, slotH:3.5,
-    // Hauteurs des 4 lignes (mm) — ajustables à la souris/au doigt (poignées horizontales)
-    // Somme = zone sûre entre les fentes : 74,25 − 8,75 − 8,75 = 56,75 mm
-    heights:[14.1875, 14.1875, 14.1875, 14.1875],
-    columns: Array.from({length: 2}, () => ({
-      width: 52.5, // 2 × 52,5 = 105 mm
-      lines: [
-        { colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' },
-        { colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' },
-        { colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' },
-        { colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' }
+    // Structure « lignes » : chaque ligne a sa hauteur (mm) et ses cellules.
+    // Chaque cellule a sa largeur (mm) — la somme des largeurs = 105 mm.
+    // Une cellule peut être fusionnée (largeur = toute la ligne) ou divisée.
+    // Somme des hauteurs = zone sûre entre les fentes : 74,25 − 8,75 − 8,75 = 56,75 mm
+    rows: Array.from({length: 4}, () => ({
+      height: 14.1875,
+      cells: [
+        { width: 52.5, colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' },
+        { width: 52.5, colIdx:null, font:'Arial', size:9, bold:false, italic:false, alignH:'center', alignV:'center' }
       ]
     })),
     margins:[ { top:0, rotate:0 }, { top:0, rotate:0 } ]

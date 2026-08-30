@@ -70,7 +70,8 @@ function switchModel(id) {
   });
 
   applyModelCSS();
-  state.columns = JSON.parse(JSON.stringify(MODEL.columns));
+  state.columns = JSON.parse(JSON.stringify(MODEL.columns || []));
+  state.rows = MODEL.rows ? JSON.parse(JSON.stringify(MODEL.rows)) : [];
   state.heights = MODEL.heights ? [...MODEL.heights] : [];
   toggleArrBar();
   renderGrid();
@@ -103,12 +104,43 @@ const state = {
   rawHeaders: [],
   qtyColIdx: 0,
   defaultQty: 1,
-  columns: JSON.parse(JSON.stringify(MODEL.columns)),
+  columns: JSON.parse(JSON.stringify(MODEL.columns || [])),
+  rows: MODEL.rows ? JSON.parse(JSON.stringify(MODEL.rows)) : [],
   heights: MODEL.heights ? [...MODEL.heights] : [],
-  selectedCell: null, // { col: 0, line: 0 }
+  selectedCell: null, // { col, line } (colonnes) ou { row, cell } (lignes)
   records: [],
   labels: [],
 };
+
+/* Un modèle est « par lignes » s'il définit rows[] (grille flexible, cellules fusionnables).
+   Sinon il est « par colonnes » (ancien format, ex. 11×115). */
+function isRowBased() {
+  return Array.isArray(MODEL.rows) && MODEL.rows.length > 0;
+}
+
+/* Convertit l'ancien format « colonnes » (columns[].lines[]) vers le format « lignes » (rows[].cells[]). */
+function columnsToRows(columns, heights) {
+  const nCols = columns.length;
+  const nRows = Math.max(0, ...columns.map(c => (c.lines || []).length));
+  const rows = [];
+  for (let r = 0; r < nRows; r++) {
+    const cells = [];
+    for (let c = 0; c < nCols; c++) {
+      const line = (columns[c].lines || [])[r];
+      if (line) {
+        cells.push({ width: columns[c].width, ...line, vertical: columns[c].vertical });
+      }
+    }
+    rows.push({ height: heights ? heights[r] : undefined, cells });
+  }
+  return rows;
+}
+
+/* Zone sûre en haut (mm) : le contenu de la grille commence après les fentes + marge.
+   Doit correspondre au padding-top du corps (var(--hole-top) dans applyModelCSS). */
+function gridSafeTop() {
+  return (MODEL.holeTop || 0) + (MODEL.slotH || 0) / 2 + 1;
+}
 
 /* ---- DOM refs ---- */
 const modelSelectBtn  = document.getElementById("modelSelectBtn");
@@ -205,9 +237,14 @@ printBtn.addEventListener("click", () => window.print());
 });
 document.getElementById('ceClose').addEventListener('click', () => { cellEditor.style.display = 'none'; refreshPreview(); });
 document.getElementById('ceDelete').addEventListener('click', deleteCell);
+document.getElementById('ceMerge').addEventListener('click', mergeCell);
+document.getElementById('ceSplit').addEventListener('click', splitCell);
+document.getElementById('ceDelH').addEventListener('click', () => doDeleteCell('h'));
+document.getElementById('ceDelV').addEventListener('click', () => doDeleteCell('v'));
+document.getElementById('ceDelCancel').addEventListener('click', () => { document.getElementById('ceDeleteChoice').style.display = 'none'; });
 saveArrBtn.addEventListener("click", () => {
   if (currentArrName && currentArrData) {
-    currentArrData = JSON.parse(JSON.stringify(state.columns));
+    currentArrData = JSON.parse(JSON.stringify(isRowBased() ? state.rows : state.columns));
     downloadArrFile(currentArrName, currentArrData);
     mapperInfo.textContent = `Configuration « ${currentArrName} » sauvegardée.`;
   } else {
@@ -351,7 +388,11 @@ function showTemplateEditor() {
 
   // Agencement : reprendre la config active, sinon auto-affectation B→G
   if (currentArrName && currentArrData) {
-    state.columns = JSON.parse(JSON.stringify(currentArrData));
+    if (isRowBased()) {
+      state.rows = JSON.parse(JSON.stringify(currentArrData));
+    } else {
+      state.columns = JSON.parse(JSON.stringify(currentArrData));
+    }
   } else {
     let autoIdx = 1; // commencer à colonne B
     state.columns.forEach(col => {
@@ -387,25 +428,89 @@ function renderGrid() {
   v.innerHTML = tipSVG();
   labelGrid.appendChild(v);
 
-  // Corps avec colonnes
+  // Corps
   const body = document.createElement('div');
   body.className = 'label-grid-body';
+  if (isRowBased()) body.classList.add('row-based');
 
-  // Poignées de lignes (horizontales, entre les lignes) — positionnées en absolu
-  const heights = state.heights || [];
-  if (heights.length > 1) {
+  if (isRowBased()) {
+    renderRowGrid(body);
+  } else {
+    renderColumnGrid(body);
+  }
+
+  labelGrid.appendChild(body);
+
+  // Fentes (trous) pour piquet : repères par-dessus la grille, sans gêner le clic
+  if (holesSVG()) {
+    const hz = document.createElement('div');
+    hz.className = 'label-grid-holes';
+    hz.innerHTML = holesSVG();
+    labelGrid.appendChild(hz);
+  }
+}
+
+/* Grille « par lignes » : chaque ligne a sa hauteur et ses cellules (largeurs indépendantes). */
+function renderRowGrid(body) {
+  const rows = state.rows;
+
+  // Poignées de hauteur de ligne (horizontales, entre les lignes) — positionnées en absolu
+  if (rows.length > 1) {
     let acc = 0;
-    for (let ri = 0; ri < heights.length - 1; ri++) {
-      acc += heights[ri];
+    for (let ri = 0; ri < rows.length - 1; ri++) {
+      acc += rows[ri].height;
       const rh = document.createElement('div');
       rh.className = 'grid-row-handle';
-      rh.style.top = ((MODEL.holeTop || 0) + acc) + 'mm';
+      rh.style.top = (gridSafeTop() + acc) + 'mm';
       rh.addEventListener('mousedown', e => onRowHandleDown(e, ri + 1));
       rh.addEventListener('touchstart', e => onRowHandleDown(e, ri + 1), { passive: false });
       rh.addEventListener('pointerdown', e => onRowHandleDown(e, ri + 1));
       body.appendChild(rh);
     }
   }
+
+  rows.forEach((row, ri) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'grid-row';
+    rowEl.style.height = row.height + 'mm';
+
+    row.cells.forEach((cell, ci) => {
+      // Poignée de largeur de cellule (avant, sauf 1ʳᵉ cellule de la ligne)
+      if (ci > 0) {
+        const h = document.createElement('div');
+        h.className = 'grid-handle';
+        h.addEventListener('mousedown', e => onCellHandleDown(e, ri, ci));
+        h.addEventListener('touchstart', e => onCellHandleDown(e, ri, ci), { passive: false });
+        h.addEventListener('pointerdown', e => onCellHandleDown(e, ri, ci));
+        rowEl.appendChild(h);
+      }
+
+      const cellEl = document.createElement('div');
+      cellEl.className = 'grid-cell';
+      cellEl.style.width = cell.width + 'mm';
+      cellEl.style.flex = '0 0 auto';
+      if (cell.vertical) cellEl.classList.add('grid-cell-vertical');
+
+      if (cell.colIdx !== null && cell.colIdx < 26) {
+        cellEl.textContent = colLetter(cell.colIdx);
+        cellEl.style.color = '#333';
+      } else {
+        cellEl.textContent = '·';
+      }
+      if (state.selectedCell && state.selectedCell.row === ri && state.selectedCell.cell === ci) {
+        cellEl.classList.add('selected');
+      }
+      cellEl.addEventListener('click', () => selectCell(ri, ci));
+      rowEl.appendChild(cellEl);
+    });
+
+    body.appendChild(rowEl);
+  });
+}
+
+/* Grille « par colonnes » (ancien format, ex. 11×115). */
+function renderColumnGrid(body) {
+  const heights = state.heights || [];
 
   state.columns.forEach((col, ci) => {
     // Poignée avant (sauf 1ʳᵉ colonne)
@@ -447,16 +552,6 @@ function renderGrid() {
 
     body.appendChild(colEl);
   });
-
-  labelGrid.appendChild(body);
-
-  // Fentes (trous) pour piquet : repères par-dessus la grille, sans gêner le clic
-  if (holesSVG()) {
-    const hz = document.createElement('div');
-    hz.className = 'label-grid-holes';
-    hz.innerHTML = holesSVG();
-    labelGrid.appendChild(hz);
-  }
 }
 
 /* ---- Drag handles (souris + tactile) ---- */
@@ -468,9 +563,17 @@ function onHandleDown(e, colIdx) {
   document.body.style.cursor = 'col-resize';
   e.preventDefault();
 }
+function onCellHandleDown(e, ri, ci) {
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
+  dragInfo = { mode: 'cell', ri, ci, startX: x, widths: state.rows[ri].cells.map(c => c.width) };
+  document.querySelectorAll('.grid-handle').forEach(h => h.classList.add('active'));
+  document.body.style.cursor = 'col-resize';
+  e.preventDefault();
+}
 function onRowHandleDown(e, rowIdx) {
   const y = e.touches ? e.touches[0].clientY : e.clientY;
-  dragInfo = { mode: 'row', rowIdx, startY: y, heights: [...(state.heights || [])] };
+  const heights = isRowBased() ? state.rows.map(r => r.height) : [...(state.heights || [])];
+  dragInfo = { mode: 'row', rowIdx, startY: y, heights };
   document.querySelectorAll('.grid-row-handle').forEach(h => h.classList.add('active'));
   document.body.style.cursor = 'row-resize';
   e.preventDefault();
@@ -490,6 +593,19 @@ function dragMove(clientX, clientY) {
     ws[ci - 1] = Math.max(MIN, w0);
     ws[ci] = Math.max(MIN, w1);
     state.columns.forEach((c, i) => { c.width = ws[i]; });
+  } else if (dragInfo.mode === 'cell') {
+    const dx = clientX - dragInfo.startX;
+    const dmm = dx / SCALE;
+    const ws = [...dragInfo.widths];
+    const ci = dragInfo.ci;
+    const MIN = 5;
+    let w0 = ws[ci - 1] + dmm;
+    let w1 = ws[ci] - dmm;
+    if (w0 < MIN) { w1 -= (MIN - w0); w0 = MIN; }
+    if (w1 < MIN) { w0 -= (MIN - w1); w1 = MIN; }
+    ws[ci - 1] = Math.max(MIN, w0);
+    ws[ci] = Math.max(MIN, w1);
+    state.rows[dragInfo.ri].cells.forEach((c, i) => { c.width = ws[i]; });
   } else {
     const dy = clientY - dragInfo.startY;
     const dmm = dy / SCALE;
@@ -502,7 +618,11 @@ function dragMove(clientX, clientY) {
     if (h1 < MIN) { h0 -= (MIN - h1); h1 = MIN; }
     hs[ri - 1] = Math.max(MIN, h0);
     hs[ri] = Math.max(MIN, h1);
-    state.heights = hs;
+    if (isRowBased()) {
+      state.rows.forEach((r, i) => { r.height = hs[i]; });
+    } else {
+      state.heights = hs;
+    }
   }
   renderGrid();
 }
@@ -527,11 +647,28 @@ document.addEventListener('pointerup', dragEnd);
 document.addEventListener('pointercancel', dragEnd);
 
 /* ---- Édition cellule ---- */
-function selectCell(ci, li) {
-  state.selectedCell = { col: ci, line: li };
-  const line = state.columns[ci].lines[li];
+function getSelectedCellConfig() {
+  if (!state.selectedCell) return null;
+  if (isRowBased()) {
+    const { row, cell } = state.selectedCell;
+    return state.rows[row] ? state.rows[row].cells[cell] : null;
+  }
+  const { col, line } = state.selectedCell;
+  return state.columns[col] ? state.columns[col].lines[line] : null;
+}
+
+function selectCell(a, b) {
+  if (isRowBased()) {
+    state.selectedCell = { row: a, cell: b };
+    cellEditorTitle.textContent = `— Ligne ${a+1}, Cellule ${b+1}`;
+  } else {
+    state.selectedCell = { col: a, line: b };
+    cellEditorTitle.textContent = `— Col ${a+1}, Ligne ${b+1}`;
+  }
+  const line = getSelectedCellConfig();
   cellEditor.style.display = 'block';
-  cellEditorTitle.textContent = `— Col ${ci+1}, Ligne ${li+1}`;
+  const delChoice = document.getElementById('ceDeleteChoice');
+  if (delChoice) delChoice.style.display = 'none';
 
   // Colonnes B → J uniquement (la colonne A est réservée aux quantités)
   const opts = [];
@@ -546,13 +683,19 @@ function selectCell(ci, li) {
   document.getElementById('ceAlignH').value = line.alignH;
   document.getElementById('ceAlignV').value = line.alignV;
 
+  // Boutons fusionner/diviser : uniquement en mode « lignes »
+  const ceMerge = document.getElementById('ceMerge');
+  const ceSplit = document.getElementById('ceSplit');
+  if (ceMerge) ceMerge.style.display = isRowBased() ? '' : 'none';
+  if (ceSplit) ceSplit.style.display = isRowBased() ? '' : 'none';
+
   renderGrid();
 }
 
 function applyCellEdit() {
   if (!state.selectedCell) return;
-  const { col, line } = state.selectedCell;
-  const cfg = state.columns[col].lines[line];
+  const cfg = getSelectedCellConfig();
+  if (!cfg) return;
   cfg.colIdx = document.getElementById('ceCol').value !== '' ? Number(document.getElementById('ceCol').value) : null;
   cfg.font = document.getElementById('ceFont').value;
   cfg.size = Number(document.getElementById('ceSize').value) || 8;
@@ -564,13 +707,82 @@ function applyCellEdit() {
   refreshPreview();
 }
 
+/* Fusionner la cellule avec celle de droite (mode « lignes ») */
+function mergeCell() {
+  if (!state.selectedCell || !isRowBased()) return;
+  const { row, cell } = state.selectedCell;
+  const r = state.rows[row];
+  if (!r || cell >= r.cells.length - 1) return;
+  const left = r.cells[cell];
+  const right = r.cells[cell + 1];
+  left.width += right.width;
+  r.cells.splice(cell + 1, 1);
+  renderGrid();
+  refreshPreview();
+}
+
+/* Diviser la cellule en deux (mode « lignes ») */
+function splitCell() {
+  if (!state.selectedCell || !isRowBased()) return;
+  const { row, cell } = state.selectedCell;
+  const r = state.rows[row];
+  if (!r) return;
+  const c = r.cells[cell];
+  const half = c.width / 2;
+  if (half < 5) return; // trop étroite pour être divisée
+  const newCell = { ...c, width: half };
+  c.width = half;
+  r.cells.splice(cell + 1, 0, newCell);
+  renderGrid();
+  refreshPreview();
+}
+
 function deleteCell() {
   if (!state.selectedCell) return;
+  if (isRowBased()) {
+    // Choix d'ajustement : horizontal (la ligne se recompose) ou vertical (la ligne disparaît)
+    const delChoice = document.getElementById('ceDeleteChoice');
+    if (delChoice) delChoice.style.display = 'block';
+    return;
+  }
+  // Ancien comportement (colonnes) : retirer la ligne de la colonne
   const { col, line } = state.selectedCell;
   state.columns[col].lines.splice(line, 1);
   if (state.columns[col].lines.length === 0) state.columns[col].lines.push({ colIdx: null, font: 'Arial', size: 8, bold: false, italic: false, alignH: 'center', alignV: 'center' });
   state.selectedCell = null;
   cellEditor.style.display = 'none';
+  renderGrid();
+  refreshPreview();
+}
+
+function doDeleteCell(mode) {
+  if (!state.selectedCell || !isRowBased()) return;
+  const { row, cell } = state.selectedCell;
+  const r = state.rows[row];
+  if (!r) return;
+  if (mode === 'h') {
+    // Horizontal : retirer la cellule, les autres cellules de la ligne s'élargissent
+    const removedWidth = r.cells[cell].width;
+    r.cells.splice(cell, 1);
+    if (r.cells.length === 0) {
+      state.rows.splice(row, 1);
+    } else {
+      const perCell = removedWidth / r.cells.length;
+      r.cells.forEach(c => { c.width += perCell; });
+    }
+  } else {
+    // Vertical : retirer la cellule et sa ligne, la hauteur est répartie sur les autres lignes
+    const h = r.height;
+    state.rows.splice(row, 1);
+    if (state.rows.length > 0) {
+      const perRow = h / state.rows.length;
+      state.rows.forEach(rr => { rr.height += perRow; });
+    }
+  }
+  state.selectedCell = null;
+  cellEditor.style.display = 'none';
+  const delChoice = document.getElementById('ceDeleteChoice');
+  if (delChoice) delChoice.style.display = 'none';
   renderGrid();
   refreshPreview();
 }
@@ -600,49 +812,90 @@ function buildFullLabel(row) {
   const body = document.createElement("div");
   body.className = "label-body";
 
-  state.columns.forEach((col, ci) => {
-    const colEl = document.createElement("div");
-    colEl.style.width = col.width + 'mm';
-    colEl.style.height = '100%';
-    colEl.style.display = 'flex';
-    colEl.style.flexDirection = 'column';
-    colEl.style.flexShrink = '0';
+  if (isRowBased()) {
+    // Grille « par lignes » : chaque ligne a sa hauteur et ses cellules (largeurs indépendantes)
+    state.rows.forEach(r => {
+      const rowEl = document.createElement("div");
+      rowEl.style.height = r.height + 'mm';
+      rowEl.style.display = 'flex';
+      rowEl.style.flexDirection = 'row';
+      rowEl.style.flexShrink = '0';
 
-    col.lines.forEach((line, li) => {
-      const cell = document.createElement("div");
-      const h = (state.heights || [])[li];
-      if (h) {
-        cell.style.height = h + 'mm';
-        cell.style.flex = '0 0 auto';
-      } else {
-        cell.style.flex = '1';
-      }
-      cell.style.flexShrink = '0';
-      cell.style.display = 'flex';
-      cell.style.alignItems = line.alignV;
-      cell.style.justifyContent = line.alignH;
-      cell.style.fontFamily = line.font;
-      cell.style.fontSize = line.size + 'pt';
-      cell.style.fontWeight = line.bold ? '700' : '400';
-      cell.style.fontStyle = line.italic ? 'italic' : 'normal';
-      cell.style.overflow = 'hidden';
-      cell.style.padding = '0 1mm';
-      cell.style.lineHeight = '1.1';
+      r.cells.forEach(cell => {
+        const cellEl = document.createElement("div");
+        cellEl.style.width = cell.width + 'mm';
+        cellEl.style.flex = '0 0 auto';
+        cellEl.style.flexShrink = '0';
+        cellEl.style.display = 'flex';
+        cellEl.style.alignItems = cell.alignV;
+        cellEl.style.justifyContent = cell.alignH;
+        cellEl.style.fontFamily = cell.font;
+        cellEl.style.fontSize = cell.size + 'pt';
+        cellEl.style.fontWeight = cell.bold ? '700' : '400';
+        cellEl.style.fontStyle = cell.italic ? 'italic' : 'normal';
+        cellEl.style.overflow = 'hidden';
+        cellEl.style.padding = '0 1mm';
+        cellEl.style.lineHeight = '1.1';
 
-      // Colonne verticale (ex. prix) : texte tourné — activée par col.vertical dans le modèle
-      if (col.vertical) {
-        cell.style.writingMode = 'vertical-rl';
-        cell.style.transform = 'rotate(180deg)';
-      }
+        if (cell.vertical) {
+          cellEl.style.writingMode = 'vertical-rl';
+          cellEl.style.transform = 'rotate(180deg)';
+        }
 
-      if (line.colIdx !== null && row) {
-        cell.textContent = String(row[line.colIdx] ?? '').trim();
-      }
-      colEl.appendChild(cell);
+        if (cell.colIdx !== null && row) {
+          cellEl.textContent = String(row[cell.colIdx] ?? '').trim();
+        }
+        rowEl.appendChild(cellEl);
+      });
+
+      body.appendChild(rowEl);
     });
+  } else {
+    // Grille « par colonnes » (ancien format, ex. 11×115)
+    state.columns.forEach((col, ci) => {
+      const colEl = document.createElement("div");
+      colEl.style.width = col.width + 'mm';
+      colEl.style.height = '100%';
+      colEl.style.display = 'flex';
+      colEl.style.flexDirection = 'column';
+      colEl.style.flexShrink = '0';
 
-    body.appendChild(colEl);
-  });
+      col.lines.forEach((line, li) => {
+        const cell = document.createElement("div");
+        const h = (state.heights || [])[li];
+        if (h) {
+          cell.style.height = h + 'mm';
+          cell.style.flex = '0 0 auto';
+        } else {
+          cell.style.flex = '1';
+        }
+        cell.style.flexShrink = '0';
+        cell.style.display = 'flex';
+        cell.style.alignItems = line.alignV;
+        cell.style.justifyContent = line.alignH;
+        cell.style.fontFamily = line.font;
+        cell.style.fontSize = line.size + 'pt';
+        cell.style.fontWeight = line.bold ? '700' : '400';
+        cell.style.fontStyle = line.italic ? 'italic' : 'normal';
+        cell.style.overflow = 'hidden';
+        cell.style.padding = '0 1mm';
+        cell.style.lineHeight = '1.1';
+
+        // Colonne verticale (ex. prix) : texte tourné — activée par col.vertical dans le modèle
+        if (col.vertical) {
+          cell.style.writingMode = 'vertical-rl';
+          cell.style.transform = 'rotate(180deg)';
+        }
+
+        if (line.colIdx !== null && row) {
+          cell.textContent = String(row[line.colIdx] ?? '').trim();
+        }
+        colEl.appendChild(cell);
+      });
+
+      body.appendChild(colEl);
+    });
+  }
 
   const pt = document.createElement("div");
   pt.className = "label-pt";
@@ -725,7 +978,16 @@ arrFolderInput.addEventListener("change", () => {
       if (Array.isArray(data)) {
         currentArrName = name;
         currentArrData = JSON.parse(JSON.stringify(data));
-        state.columns = JSON.parse(JSON.stringify(data));
+        if (isRowBased()) {
+          // Le fichier doit contenir des lignes (rows). Si c'est un ancien fichier en colonnes, on migre.
+          if (data.length > 0 && data[0].cells) {
+            state.rows = JSON.parse(JSON.stringify(data));
+          } else {
+            state.rows = columnsToRows(data, state.rows.map(r => r.height));
+          }
+        } else {
+          state.columns = JSON.parse(JSON.stringify(data));
+        }
         refreshArrList();
         renderGrid(); refreshPreview();
         mapperInfo.textContent = `Configuration « ${name} » chargée.`;
@@ -762,7 +1024,7 @@ function doSaveNewArr() {
   if (!name) return;
   arrPopup.style.display = 'none';
   currentArrName = name;
-  currentArrData = JSON.parse(JSON.stringify(state.columns));
+  currentArrData = JSON.parse(JSON.stringify(isRowBased() ? state.rows : state.columns));
   refreshArrList();
   downloadArrFile(name, currentArrData);
   mapperInfo.textContent = `Configuration « ${name} » créée (fichier téléchargé).`;

@@ -260,6 +260,10 @@ input[type="number"] {
   padding: var(--hole-top, 0) 0 var(--hole-bottom, 0); /* réserve les zones des fentes */
   box-sizing: border-box;
 }
+/* Grille « par lignes » : les lignes s'empilent verticalement (au lieu de côte à côte) */
+.label-grid-body.row-based {
+  flex-direction: column;
+}
 .label-grid-v {
   position: absolute; top: 0; bottom: 0;
   left: var(--tx); width: var(--tw);
@@ -326,6 +330,29 @@ input[type="number"] {
   border-bottom: none;
 }
 
+/* Grille « par lignes » : chaque ligne a sa hauteur et ses cellules (largeurs indépendantes) */
+.grid-row {
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 0;
+  position: relative;
+}
+.grid-row .grid-cell {
+  flex: 0 0 auto;
+  border-bottom: 1px dashed #ccc;
+  border-right: 1px dashed #ccc;
+}
+.grid-row .grid-cell:last-child {
+  border-right: none;
+}
+.grid-row:last-child .grid-cell {
+  border-bottom: none;
+}
+.grid-cell-vertical {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
 /* Poignées de redimensionnement */
 .grid-handle {
   width: 6px;
@@ -365,7 +392,7 @@ input[type="number"] {
   margin-top: -3px; /* centré sur la frontière */
   cursor: row-resize;
   background: transparent;
-  z-index: 5;
+  z-index: 6; /* au-dessus des poignées de cellule */
   touch-action: none;
 }
 @media (any-pointer: coarse) {
