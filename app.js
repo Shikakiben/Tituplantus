@@ -5,22 +5,8 @@
 const SCALE = 3;
 
 function tipSVG() {
-  if (!MODEL.lw || !MODEL.tw) return '';
+  if (!MODEL.lw) return '';
   return `<svg viewBox="0 0 ${MODEL.tw} ${MODEL.lh}" preserveAspectRatio="none" shape-rendering="crispEdges"><line x1="0" y1="0" x2="${MODEL.tw}" y2="${MODEL.lh/2}" stroke="#999" stroke-width="0.2"/><line x1="0" y1="${MODEL.lh}" x2="${MODEL.tw}" y2="${MODEL.lh/2}" stroke="#999" stroke-width="0.2"/></svg>`;
-}
-
-/* Fentes (trous) pré-percées en haut/bas pour passer sur un piquet */
-function holesSVG() {
-  if (!MODEL.lw || !MODEL.slotW) return '';
-  const cx = MODEL.lw / 2;
-  const x = cx - MODEL.slotW / 2;
-  const ry = MODEL.slotH / 2;
-  const topY = (MODEL.holeTop - MODEL.slotH) / 2;
-  const botY = MODEL.lh - (MODEL.holeBottom + MODEL.slotH) / 2;
-  return `<svg viewBox="0 0 ${MODEL.lw} ${MODEL.lh}" preserveAspectRatio="none" shape-rendering="crispEdges">
-    <rect x="${x}" y="${topY}" width="${MODEL.slotW}" height="${MODEL.slotH}" rx="${ry}" fill="none" stroke="#999" stroke-width="0.2"/>
-    <rect x="${x}" y="${botY}" width="${MODEL.slotW}" height="${MODEL.slotH}" rx="${ry}" fill="none" stroke="#999" stroke-width="0.2"/>
-  </svg>`;
 }
 
 function applyModelCSS() {
@@ -34,8 +20,6 @@ function applyModelCSS() {
   r.setProperty('--gbw', MODEL.gbw + 'mm');
   r.setProperty('--pw', MODEL.pw + 'mm');
   r.setProperty('--ph', MODEL.ph + 'mm');
-  r.setProperty('--hole-top', (MODEL.holeTop || 0) + 'mm');
-  r.setProperty('--hole-bottom', (MODEL.holeBottom || 0) + 'mm');
   const old = document.getElementById('dyn-page');
   if (old) old.remove();
   const s = document.createElement('style');
@@ -426,14 +410,6 @@ function renderGrid() {
   });
 
   labelGrid.appendChild(body);
-
-  // Fentes (trous) pour piquet : dessinées par-dessus, sans gêner le clic
-  if (holesSVG()) {
-    const hz = document.createElement('div');
-    hz.className = 'label-grid-holes';
-    hz.innerHTML = holesSVG();
-    labelGrid.appendChild(hz);
-  }
 }
 
 /* ---- Drag handles (souris + tactile) ---- */
@@ -550,7 +526,6 @@ function refreshPreview() {
 function buildFullLabel(row) {
   const label = document.createElement("div");
   label.className = "label";
-  if (!MODEL.tw) label.classList.add("rect");
 
   const body = document.createElement("div");
   body.className = "label-body";
@@ -592,24 +567,12 @@ function buildFullLabel(row) {
     body.appendChild(colEl);
   });
 
+  const pt = document.createElement("div");
+  pt.className = "label-pt";
+  pt.innerHTML = tipSVG();
+
   label.appendChild(body);
-
-  // Pointe en V (uniquement si le modèle en a une)
-  if (MODEL.tw) {
-    const pt = document.createElement("div");
-    pt.className = "label-pt";
-    pt.innerHTML = tipSVG();
-    label.appendChild(pt);
-  }
-
-  // Fentes pour piquet (dessinées par-dessus la zone non imprimable)
-  if (holesSVG()) {
-    const hz = document.createElement("div");
-    hz.className = "label-holes";
-    hz.innerHTML = holesSVG();
-    label.appendChild(hz);
-  }
-
+  label.appendChild(pt);
   return label;
 }
 
@@ -825,24 +788,11 @@ function renderSheets() {
 function buildEmptyLabel() {
   const label = document.createElement("div");
   label.className = "label";
-  if (!MODEL.tw) label.classList.add("rect");
   const body = document.createElement("div");
   body.className = "label-body";
   body.innerHTML = '<div style="flex:1">&nbsp;</div>';
   label.appendChild(body);
-
-  if (MODEL.tw) {
-    const pt = document.createElement("div");
-    pt.className = "label-pt";
-    pt.innerHTML = tipSVG();
-    label.appendChild(pt);
-  }
-  if (holesSVG()) {
-    const hz = document.createElement("div");
-    hz.className = "label-holes";
-    hz.innerHTML = holesSVG();
-    label.appendChild(hz);
-  }
+  label.innerHTML += `<div class="label-pt">${tipSVG()}</div>`;
   return label;
 }
 
